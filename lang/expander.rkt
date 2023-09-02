@@ -72,6 +72,7 @@
 
 (provide #%top-interaction
          #%datum
+          #%module-begin
          (rename-out [app #%app]
                      [top #%top]
                      [shen-define define]
