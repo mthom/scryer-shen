@@ -1,6 +1,8 @@
 #lang racket
 
-(require racket/stxparam syntax/parse/define (for-syntax syntax/parse))
+(require racket/stxparam
+         syntax/parse/define
+         (for-syntax racket/match syntax/parse))
 
 (define-syntax-parameter fail
   (lambda (stx)
@@ -13,14 +15,27 @@
 (begin-for-syntax
   (define (string-capitalized? string)
     (char-upper-case? (string-ref string 0)))
+
+  (define (quote-empty-lists pattern)
+    (match (syntax-e pattern)
+      [(list cons-symbol hd tl)
+       #:when (eq? (syntax->datum cons-symbol) 'cons)
+       (with-syntax ([tl (quote-empty-lists tl)]
+                     [hd hd])
+         (syntax/loc pattern (cons hd tl)))]
+      ['() (syntax/loc pattern (quote ()))]
+      [_ pattern]))
   
   (define-syntax-class shen-var-id
     (pattern (~and id:id (~fail #:unless (string-capitalized? (symbol->string (syntax-e #'id)))))))
 
   (define-syntax-class clause-pattern
+    #:attributes (pat)
     #:datum-literals (-> <-)
-    (pattern (~and (~not ->) (~not <-)))
-    (pattern (~or (->) (<-))))
+    (pattern (~and (~not ->) (~not <-))
+      #:with pat (quote-empty-lists this-syntax))
+    (pattern (~or (->) (<-))
+      #:with pat this-syntax))
 
   (define-splicing-syntax-class shen-binding
     #:attributes (id expr)
@@ -30,9 +45,9 @@
     #:attributes ((pats 1) match-clause)
     #:datum-literals (-> <-)
     (pattern (~seq pats:clause-pattern ... -> body:expr)
-      #:with match-clause #'[(pats ...) body])
+      #:with match-clause #'[(pats.pat ...) body])
     (pattern (~seq pats:clause-pattern ... <- body:expr)
-      #:with match-clause #'[(pats ...)                             
+      #:with match-clause #'[(pats.pat ...)
                              (=> exit)
                              (let ((fail-if-fn (lambda (fail-expr)
                                                  (when fail-expr (exit)))))
@@ -43,10 +58,8 @@
 
 (define-syntax (top stx)
   (syntax-parse stx
-    [(top . (~datum empty))
-     (syntax/loc stx '())]
     [(top . id:shen-var-id)
-     (syntax/loc stx id)]    
+     (syntax/loc stx id)]
     [(top . id:id)
      (syntax/loc stx id)]))
 
@@ -72,7 +85,6 @@
 
 (provide #%top-interaction
          #%datum
-          #%module-begin
          (rename-out [app #%app]
                      [top #%top]
                      [shen-define define]

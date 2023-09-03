@@ -1,5 +1,5 @@
 (module reader syntax/module-reader
-  #:language 'shen
+  #:language 'shen 
   #:wrapper1 (lambda (t)
                (parameterize ([current-readtable shen-readtable])
                  (t)))
@@ -48,7 +48,7 @@
                           (consume-spaces in)
                           (case (peek-char in)
                             ([#\]] (read-char in)
-                                   (yield 'empty)                                      
+                                   (yield '())
                                    (yield (void)))
                             ([#\|] (read-char in)
                                    (consume-spaces in)
