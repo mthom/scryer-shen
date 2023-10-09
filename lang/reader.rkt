@@ -1,5 +1,5 @@
 (module reader syntax/module-reader
-  #:language 'shen 
+  #:language 'shen
   #:wrapper1 (lambda (t)
                (parameterize ([current-readtable shen-readtable])
                  (t)))
@@ -10,10 +10,8 @@
              [(drracket:default-extension) "Shen"]
              [(drracket:submit-predicate)
               (dynamic-require 'shen/tools/submit 'repl-submit?)]
-             #|
              [(color-lexer)
-              (dynamic-require 'recursive-language/tool/syntax-color 'get-syntax-token)]
-             |#
+              (dynamic-require 'shen/tools/colorer 'shen-colorer)]
              [else (default key defval)]))
 
   (require racket

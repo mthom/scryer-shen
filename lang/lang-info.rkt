@@ -5,6 +5,8 @@
     (case key
       [(configure-runtime)
        '(#(shen/lang/configure-runtime configure #f))]
+      [(color-lexer)
+       (dynamic-require 'shen/tools/colorer 'shen-colorer)]
       [else
        default])))
 

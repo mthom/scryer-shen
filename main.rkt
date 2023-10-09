@@ -8,11 +8,9 @@
           #%module-begin)
 
 ;; arithmetic operators
-(provide + - * /)
+(provide + - * / > <)
 
 ;; list and tuples
-(r:define hd car)
-(r:define tl cdr)
 (r:define (@p . args) (cons '@p args))
 
-(provide hd tl @p cons)
+(provide (rename-out [car hd] [cdr tl]) @p cons append map)
