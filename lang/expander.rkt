@@ -1,7 +1,7 @@
 #lang racket
 
-(require racket/stxparam
-         syntax/parse/define
+(require syntax/parse/define
+         racket/stxparam
          (for-syntax racket/match syntax/parse))
 
 (define-syntax-parameter fail
@@ -56,13 +56,11 @@
                    (~optional (~seq where guard:expr)
                               #:defaults ([guard #'#t])))
       #:with match-clause #'[(pats.pat ...)
-                             #:when guard
-                             (=> exit)
-                             (let ((fail-if-fn (lambda (fail-expr)
-                                                 (when fail-expr (exit)))))
-                               ;; TODO: get rid of fail-if-fn somehow! but keep the fail-if syntax parameter.
-                               (syntax-parameterize ([fail (make-rename-transformer #'exit)]
-                                                     [fail-if (make-rename-transformer #'fail-if-fn)])
+                             (=> fail-func)
+                             (unless guard (fail-func))
+                             (let ([fail-if-func (lambda (fail-condition) (when fail-condition (fail-func)))])
+                               (syntax-parameterize ([fail (make-rename-transformer #'fail-func)]
+                                                     [fail-if (make-rename-transformer #'fail-if-func)])
                                  body))])))
 
 (define-syntax (top stx)
@@ -83,8 +81,11 @@
   #:fail-unless (apply = (map length (attribute clause.pats)))
   "each clause must contain the same number of patterns"
   #:with (arg-id ...) (generate-temporaries (car (attribute clause.pats)))
-  (define/match (name arg-id ...)
-    clause.match-clause ...))
+  (define name
+    (curry
+     (lambda (arg-id ...)
+       (match* (arg-id ...)
+         clause.match-clause ...)))))
 
 (define-syntax-parse-rule (shen-let b:shen-binding ...+ body:expr)
   (let* ([b.id b.expr] ...) body))
@@ -94,6 +95,7 @@
 
 (provide #%top-interaction
          #%datum
+         fail fail-if
          (rename-out [app #%app]
                      [top #%top]
                      [shen-define define]
