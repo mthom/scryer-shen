@@ -1,9 +1,9 @@
 #lang shen
 
 (define test-2
-  4 4 X <- (fail) where (= X 3)
+  4 4 X <- (fail-if (= X 2))
   4 4 5 -> succeed
-  4 4 X -> X)
+  4 4 X -> (* X X))
 
 (define test-3
   X -> (let Y (+ 1 1)

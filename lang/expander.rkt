@@ -58,10 +58,13 @@
       #:with match-clause #'[(pats.pat ...)
                              (=> fail-func)
                              (unless guard (fail-func))
-                             (let ([fail-if-func (lambda (fail-condition) (when fail-condition (fail-func)))])
-                               (syntax-parameterize ([fail (make-rename-transformer #'fail-func)]
-                                                     [fail-if (make-rename-transformer #'fail-if-func)])
-                                 body))])))
+                             (syntax-parameterize ([fail (syntax-id-rules (fail-func)
+                                                             [(fail) (fail-func)]
+                                                             [fail 'fail])]
+                                                   [fail-if (syntax-id-rules (fail-func)
+                                                              [(fail-if e) (when e (fail-func))]
+                                                              [fail-if 'fail-if])])
+                               body)])))
 
 (define-syntax (top stx)
   (syntax-parse stx
