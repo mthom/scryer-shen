@@ -5,12 +5,10 @@
          (for-syntax racket/match syntax/parse))
 
 (define-syntax-parameter fail
-  (lambda (stx)
-    (raise-syntax-error #f "backtracking not defined in this clause arm" stx)))
+  (syntax-id-rules (fail) [_ 'fail]))
 
 (define-syntax-parameter fail-if
-  (lambda (stx)
-    (raise-syntax-error #f "backtracking not defined in this clause arm" stx)))
+  (syntax-id-rules (fail-if) [_ 'fail-if]))
 
 (begin-for-syntax
   (define (capitalized-symbol? symbol)
@@ -98,7 +96,7 @@
 
 (provide #%top-interaction
          #%datum
-         fail fail-if
+         (protect-out fail fail-if)
          (rename-out [app #%app]
                      [top #%top]
                      [shen-define define]
