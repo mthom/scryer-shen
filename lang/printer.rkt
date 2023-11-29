@@ -39,5 +39,3 @@
      (write-string datum port)]
     [_
      (write datum port)]))
-     
-  
