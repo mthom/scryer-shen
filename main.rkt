@@ -17,5 +17,9 @@
 (provide (curry-out + - * / > < = >= <=))
 
 (provide (rename-out [car hd] [cdr tl])
-         (curry-out cons [cons adjoin] append [map #:arity 2])
+         (curry-out
+          [cons #:arity 2]
+          [cons adjoin #:arity 2]
+          [append #:arity 2]
+          [map #:arity 2])
          @p)
