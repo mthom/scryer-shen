@@ -2,7 +2,7 @@
 
 (require syntax/parse/define
          racket/stxparam
-         (for-syntax racket/match syntax/parse))
+         (for-syntax racket/match racket/provide-transform syntax/parse syntax/stx))
 
 (define-syntax-parameter fail
   (syntax-id-rules (fail) [_ 'fail]))
@@ -62,7 +62,18 @@
                                                    [fail-if (syntax-id-rules (fail-func)
                                                               [(fail-if e) (when e (fail-func))]
                                                               [fail-if 'fail-if])])
-                               body)])))
+                               body)]))
+
+  (define-syntax-class curry-out-export
+    #:attributes (func-id renamed-id wrapper)
+    (pattern [(~seq func-id:id (~optional renamed-id:id #:defaults ([renamed-id #'func-id]))
+                    #:arity wrapped-arity:nat)]
+      #:with wrapper #'(curry (procedure-reduce-arity func-id wrapped-arity)))
+    (pattern [(~seq func-id:id renamed-id:id)]
+      #:with wrapper #'(curry func-id))
+    (pattern func-id:id
+      #:with renamed-id #'func-id
+      #:with wrapper #'(curry func-id))))
 
 (define-syntax (top stx)
   (syntax-parse stx
@@ -77,6 +88,19 @@
      (syntax/loc stx empty)]
     [(app . form)
      (syntax/loc stx (#%app . form))]))
+
+(define-syntax curry-out
+  (make-provide-pre-transformer
+   (lambda (stx modes)
+     (syntax-parse stx
+       [(_ f:curry-out-export ...)
+        #:with (curried-f ...)
+               (stx-map
+               syntax-local-lift-expression
+               #'(f.wrapper ...))
+        (pre-expand-export
+         #'(rename-out [curried-f f.renamed-id] ...)
+         modes)]))))
 
 (define-syntax-parse-rule (shen-define name:id clause:clause-definition ...+)
   #:fail-unless (apply = (map length (attribute clause.pats)))
@@ -97,6 +121,7 @@
 (provide #%top-interaction
          #%datum
          (protect-out fail fail-if)
+         curry-out
          (rename-out [app #%app]
                      [top #%top]
                      [shen-define define]
