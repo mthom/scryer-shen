@@ -4,11 +4,27 @@
          racket/stxparam
          (for-syntax racket/match racket/provide-transform syntax/parse syntax/stx))
 
+(define-values (struct:failure make-failure-object failure? failure-ref set-failure!)
+  (make-struct-type 'failure #f 0 0))
+
+(define failure-object (make-failure-object))
+
+(define fail-if-fn
+  (curry
+   (lambda (fail-fn x)
+     (if (fail-fn x)
+         failure-object
+         x))))
+
 (define-syntax-parameter fail
-  (syntax-id-rules (fail) [_ 'fail]))
+  (syntax-id-rules (fail)
+    [(fail) failure-object]
+    [fail (lambda () failure-object)]))
 
 (define-syntax-parameter fail-if
-  (syntax-id-rules (fail-if) [_ 'fail-if]))
+  (syntax-id-rules (fail)
+    [(fail-if fail-fn x) (fail-if-fn fail-fn x)]
+    [fail-if fail-if-fn]))
 
 (begin-for-syntax
   (define (capitalized-symbol? symbol)
@@ -54,14 +70,23 @@
                    (~optional (~seq where guard:expr)
                               #:defaults ([guard #'#t])))
       #:with match-clause #'[(pats.pat ...)
-                             (=> fail-func)
-                             (unless guard (fail-func))
-                             (syntax-parameterize ([fail (syntax-id-rules (fail-func)
-                                                             [(fail) (fail-func)]
-                                                             [fail 'fail])]
-                                                   [fail-if (syntax-id-rules (fail-func)
-                                                              [(fail-if e) (when e (fail-func))]
-                                                              [fail-if 'fail-if])])
+                             (=> backtrack-fn)
+                             (unless guard (backtrack-fn))
+                             (syntax-parameterize ([fail (syntax-id-rules (backtrack-fn)
+                                                             [(fail) (backtrack-fn)]
+                                                             [fail backtrack-fn])]
+                                                   [fail-if (syntax-id-rules (backtrack-fn)
+                                                              [(fail-if fail-fn r)
+                                                               (let ([result r])
+                                                                 (if (fail-fn result)
+                                                                     (backtrack-fn)
+                                                                     result))]
+                                                              [fail-if
+                                                               (lambda (e r)
+                                                                 (let ([result r])
+                                                                   (if (fail-fn result)
+                                                                       (backtrack-fn)
+                                                                       result)))])])
                                body)]))
 
   (define-syntax-class curry-out-export
@@ -96,8 +121,8 @@
        [(_ f:curry-out-export ...)
         #:with (curried-f ...)
                (stx-map
-               syntax-local-lift-expression
-               #'(f.wrapper ...))
+                syntax-local-lift-expression
+                #'(f.wrapper ...))
         (pre-expand-export
          #'(rename-out [curried-f f.renamed-id] ...)
          modes)]))))
