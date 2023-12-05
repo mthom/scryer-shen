@@ -2,7 +2,10 @@
 
 (require syntax/parse/define
          racket/stxparam
-         (for-syntax racket/match racket/provide-transform syntax/parse syntax/stx))
+         (for-syntax racket/match
+                     racket/provide-transform
+                     syntax/parse
+                     syntax/stx))
 
 (define-values (struct:failure make-failure-object failure? failure-ref set-failure!)
   (make-struct-type 'failure #f 0 0))
@@ -27,6 +30,8 @@
     [fail-if fail-if-fn]))
 
 (begin-for-syntax
+  (require racket/syntax)
+
   (define (capitalized-symbol? symbol)
     (and (symbol? symbol)
          (let ([string (symbol->string symbol)])
@@ -54,6 +59,9 @@
       #:with pat (quote-empty-lists this-syntax))
     (pattern (~or (->) (<-))
       #:with pat this-syntax))
+
+  (define-syntax-class assoc
+    (pattern (~or #:right #:left)))
 
   (define-splicing-syntax-class shen-binding
     #:attributes (id expr)
@@ -90,15 +98,46 @@
                                body)]))
 
   (define-syntax-class curry-out-export
-    #:attributes (func-id renamed-id wrapper)
+    #:attributes (func-id renamed-id wrapper assoc)
     (pattern [(~seq func-id:id (~optional renamed-id:id #:defaults ([renamed-id #'func-id]))
-                    #:arity wrapped-arity:nat)]
+                    #:arity wrapped-arity:nat
+                    (~optional (~seq #:variadic assoc:assoc) #:defaults ([assoc #'#f])))]
+      #:fail-when (and (attribute assoc) (not (= (syntax->datum (attribute wrapped-arity)) 2)))
+      "variadic functions must have arity 2"
       #:with wrapper #'(curry (procedure-reduce-arity func-id wrapped-arity)))
     (pattern [(~seq func-id:id renamed-id:id)]
-      #:with wrapper #'(curry func-id))
+      #:with wrapper #'(curry func-id)
+      #:with assoc #'#f)
     (pattern func-id:id
       #:with renamed-id #'func-id
-      #:with wrapper #'(curry func-id))))
+      #:with wrapper #'(curry func-id)
+      #:with assoc #'#f))
+
+  (define (generate-variadic-macro-or-wrapper assoc wrapper-id)
+    (case assoc
+      [(#:right) (let ([new-id (generate-temporary)])
+                   (syntax-local-lift-module-end-declaration
+                    (with-syntax ([wrapper-id wrapper-id]
+                                  [new-id new-id])
+                      #'(define-syntax (new-id stx)
+                          (syntax-parse stx
+                            [(_ a) #'(wrapper-id a)]
+                            [(_ a b) #'(wrapper-id a b)]
+                            [(_ a b . cs) #'(wrapper-id a (new-id b . cs))]
+                            [new-id:id #'wrapper-id]))))
+                   new-id)]
+      [(#:left) (let ([new-id (generate-temporary)])
+                  (syntax-local-lift-module-end-declaration
+                   (with-syntax ([wrapper-id wrapper-id]
+                                 [new-id new-id])
+                     #'(define-syntax (new-id stx)
+                         (syntax-parse stx
+                           [(_ a) #'(wrapper-id a)]
+                           [(_ a b) #'(wrapper-id a b)]
+                           [(_ a b . cs) #'(new-id (wrapper-id a b) . cs)]
+                           [new-id:id #'wrapper-id]))))
+                  new-id)]
+      [else wrapper-id])))
 
 (define-syntax (top stx)
   (syntax-parse stx
@@ -119,10 +158,17 @@
    (lambda (stx modes)
      (syntax-parse stx
        [(_ f:curry-out-export ...)
-        #:with (curried-f ...)
+        #:with (wrapper-f ...)
                (stx-map
                 syntax-local-lift-expression
                 #'(f.wrapper ...))
+        #:with (curried-f ...)
+               (stx-map
+                (lambda (stx)
+                  (match (syntax-e stx)
+                    [(cons assoc wrapper-id)
+                     (generate-variadic-macro-or-wrapper (syntax->datum assoc) wrapper-id)]))
+                #'((f.assoc . wrapper-f) ...))
         (pre-expand-export
          #'(rename-out [curried-f f.renamed-id] ...)
          modes)]))))

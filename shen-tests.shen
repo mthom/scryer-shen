@@ -10,5 +10,5 @@
          (+ Y X)))
 
 (define test-4
-  4 4 5 <- (fail-if (= 1 1) 2)
+  4 4 5 <- (fail-if (= 2) 2)
   4 4 X -> [success: X])
