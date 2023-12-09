@@ -4,6 +4,7 @@
          racket/stxparam
          (for-syntax racket/match
                      racket/provide-transform
+                     racket/syntax
                      syntax/parse
                      syntax/stx))
 
@@ -30,8 +31,6 @@
     [fail-if fail-if-fn]))
 
 (begin-for-syntax
-  (require racket/syntax)
-
   (define (capitalized-symbol? symbol)
     (and (symbol? symbol)
          (let ([string (symbol->string symbol)])
@@ -102,7 +101,7 @@
     (pattern [(~seq func-id:id (~optional renamed-id:id #:defaults ([renamed-id #'func-id]))
                     #:arity wrapped-arity:nat
                     (~optional (~seq #:variadic assoc:assoc) #:defaults ([assoc #'#f])))]
-      #:fail-when (and (attribute assoc) (not (= (syntax->datum (attribute wrapped-arity)) 2)))
+      #:fail-when (and (syntax->datum (attribute assoc)) (not (= (syntax->datum (attribute wrapped-arity)) 2)))
       "variadic functions must have arity 2"
       #:with wrapper #'(curry (procedure-reduce-arity func-id wrapped-arity)))
     (pattern [(~seq func-id:id renamed-id:id)]
@@ -113,45 +112,29 @@
       #:with wrapper #'(curry func-id)
       #:with assoc #'#f))
 
-  (define (generate-variadic-macro-or-wrapper assoc wrapper-id)
+  (define (generate-variadic-macro-or-wrapper assoc wrapper-id [new-id (generate-temporary)])
     (case assoc
-      [(#:right) (let ([new-id (generate-temporary)])
-                   (syntax-local-lift-module-end-declaration
-                    (with-syntax ([wrapper-id wrapper-id]
-                                  [new-id new-id])
-                      #'(define-syntax (new-id stx)
-                          (syntax-parse stx
-                            [(_ a) #'(wrapper-id a)]
-                            [(_ a b) #'(wrapper-id a b)]
-                            [(_ a b . cs) #'(wrapper-id a (new-id b . cs))]
-                            [new-id:id #'wrapper-id]))))
-                   new-id)]
-      [(#:left) (let ([new-id (generate-temporary)])
-                  (syntax-local-lift-module-end-declaration
-                   (with-syntax ([wrapper-id wrapper-id]
-                                 [new-id new-id])
-                     #'(define-syntax (new-id stx)
-                         (syntax-parse stx
-                           [(_ a) #'(wrapper-id a)]
-                           [(_ a b) #'(wrapper-id a b)]
-                           [(_ a b . cs) #'(new-id (wrapper-id a b) . cs)]
-                           [new-id:id #'wrapper-id]))))
-                  new-id)]
+      [(#:right) (syntax-local-lift-module-end-declaration
+                  (with-syntax ([wrapper-id wrapper-id]
+                                [new-id new-id])
+                    #'(define-syntax (new-id stx)
+                        (syntax-parse stx
+                          [(_ a) #'(wrapper-id a)]
+                          [(_ a b) #'(wrapper-id a b)]
+                          [(_ a b . cs) #'(wrapper-id a (new-id b . cs))]
+                          [new-id:id #'wrapper-id]))))
+                 new-id]
+      [(#:left) (syntax-local-lift-module-end-declaration
+                 (with-syntax ([wrapper-id wrapper-id]
+                               [new-id new-id])
+                   #'(define-syntax (new-id stx)
+                       (syntax-parse stx
+                         [(_ a) #'(wrapper-id a)]
+                         [(_ a b) #'(wrapper-id a b)]
+                         [(_ a b . cs) #'(new-id (wrapper-id a b) . cs)]
+                         [new-id:id #'wrapper-id]))))
+                new-id]
       [else wrapper-id])))
-
-(define-syntax (top stx)
-  (syntax-parse stx
-    [(top . id:shen-var-id)
-     #'(#%top . id)]
-    [(top . id:id)
-     (syntax/loc stx (quote id))]))
-
-(define-syntax (app stx)
-  (syntax-parse stx
-    [(app)
-     (syntax/loc stx empty)]
-    [(app . form)
-     (syntax/loc stx (#%app . form))]))
 
 (define-syntax curry-out
   (make-provide-pre-transformer
@@ -189,12 +172,36 @@
 (define-syntax-parse-rule (shen-lambda id:shen-var-id ... body:expr)
   (lambda (id ...) body))
 
+(define-syntax (top stx)
+  (syntax-parse stx
+    [(top . id:shen-var-id)
+     #'(#%top . id)]
+    [(top . id:id)
+     (syntax/loc stx (quote id))]))
+
+(define-syntax (app stx)
+  (syntax-parse stx
+    [(app)
+     (syntax/loc stx empty)]
+    [(app . form)
+     (syntax/loc stx (#%app . form))]))
+
+(define-syntax (shen-true stx)
+  (syntax-case stx ()
+    [_:id #'#t]))
+
+(define-syntax (shen-false stx)
+  (syntax-case stx ()
+    [_:id #'#f]))
+
 (provide #%top-interaction
          #%datum
          (protect-out fail fail-if)
          curry-out
          (rename-out [app #%app]
                      [top #%top]
+                     [shen-true true]
+                     [shen-false false]
                      [shen-define define]
                      [shen-let let]
                      [shen-lambda /.]))

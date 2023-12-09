@@ -37,5 +37,7 @@
      (write-string (symbol->string datum) port)]
     [(? string?)
      (write-string datum port)]
+    [(? boolean?)
+     (write-string (if datum "true" "false") port)]
     [_
      (write datum port)]))
