@@ -194,10 +194,49 @@
   (syntax-case stx ()
     [_:id #'#f]))
 
+(define (and-wrapper value thunk)
+  (if value (thunk) #f))
+
+(define (or-wrapper value thunk)
+  (if value #t (thunk)))
+
+(define-syntax (shen-and stx)
+  (syntax-parse stx
+    [(_ a b) #'(and-wrapper a (thunk (if b #t #f)))]
+    [(_ a b . cs) #'(and-wrapper a (thunk (shen-and b . cs)))]
+    [_:id #'and-wrapper]))
+
+(define-syntax (shen-or stx)
+  (syntax-parse stx
+    [(_ a b) #'(or-wrapper a (thunk (if b #t #f)))]
+    [(_ a b . cs) #'(or-wrapper a (thunk (shen-or b . cs)))]
+    [_:id #'or-wrapper]))
+
+(define shen-variable-namespace
+  (make-empty-namespace))
+
+(define-syntax-parse-rule (shen-set id:id value:expr)
+  (namespace-set-variable-value! 'id value #f shen-variable-namespace))
+
+(define-syntax (shen-value stx)
+  (syntax-parse stx
+    [(_ id:id) #'(value-fn 'id)]
+    [id:id #'value-fn]))
+
+(define (value-fn v)
+  (if (symbol? v)
+      (namespace-variable-value v #t (thunk (error "name not found in symbol table."))
+                                shen-variable-namespace)
+      (error "value: first parameter must be a symbol.")))
+
 (provide #%top-interaction
          #%datum
          (protect-out fail fail-if)
          curry-out
+         shen-and
+         shen-or
+         shen-set
+         shen-value
          (rename-out [app #%app]
                      [top #%top]
                      [shen-true true]

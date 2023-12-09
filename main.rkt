@@ -27,16 +27,9 @@
         #t)
       #f))
 
-(r:define (value v)
-  (if (symbol? v)
-      (namespace-variable-value v #t (thunk (error "name not found in symbol table.")))
-      (error "value: first parameter must be a symbol.")))
-
 (compile-allow-set!-undefined #t)
 
-(current-namespace (make-empty-namespace))
-
-;; standard library functions
+;; system functions
 (provide (curry-out [+ #:arity 2 #:variadic #:right]
                     [* #:arity 2 #:variadic #:right]
                     [- #:arity 2]
@@ -57,12 +50,12 @@
          (rename-out [boolean? boolean?]
                      [car hd]
                      [cdr tl]
-                     [namespace-set-variable-value! set]
-                     [vector? absvector?])
-         and
+                     [shen-set set]
+                     [shen-value value]
+                     [vector? absvector?]
+                     [shen-and and]
+                     [shen-or or])
          arity
-         bound?
-         or
-         value)
+         bound?)
 
 (provide @p)
