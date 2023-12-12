@@ -9,14 +9,14 @@
 (define (print-cons-contents args port)
   (for ([arg (in-generator
               (let loop ([pair args])
-                (cond [(pair? pair)                    
+                (cond [(pair? pair)
                        (yield (car pair))
                        (loop (cdr pair))]
                       [else
                        (unless (empty? pair)
                          (write-string " |" port)
-                         (yield pair))])))]        
-        [space (sequence-append (in-value "") (in-cycle '(#\space)))])    
+                         (yield pair))])))]
+        [space (sequence-append (in-value "") (in-cycle '(#\space)))])
     (fprintf port "~a" space)
     (shen-printer arg port)))
 
