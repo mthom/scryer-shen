@@ -2,38 +2,46 @@
 
 (require racket/stxparam
          syntax/parse/define
-         (for-syntax racket/function
+         "syntax-utils.rkt"
+         (for-syntax racket/base
+                     racket/function
                      racket/match
                      racket/provide-transform
                      racket/syntax
                      syntax/parse
-                     syntax/stx
-                     "syntax-utils.rkt"))
+                     syntax/stx))
 
 (begin-for-syntax
-  (define (generate-variadic-macro-or-wrapper assoc wrapper-id [new-id (generate-temporary)])
+  (define (generate-variadic-macro-or-wrapper assoc wrapper-id [new-id (generate-temporary "wrapper-macro")])
     (case assoc
-      [(#:right) (syntax-local-lift-module-end-declaration
-                  (with-syntax ([wrapper-id wrapper-id]
-                                [new-id new-id])
-                    #'(define-syntax (new-id stx)
-                        (syntax-parse stx
-                          [(_ a) #'(wrapper-id a)]
-                          [(_ a b) #'(wrapper-id a b)]
-                          [(_ a b . cs) #'(wrapper-id a (new-id b . cs))]
-                          [new-id:id #'wrapper-id]))))
-                 new-id]
-      [(#:left) (syntax-local-lift-module-end-declaration
-                 (with-syntax ([wrapper-id wrapper-id]
+      [(#:right) (with-syntax ([wrapper-id wrapper-id]
                                [new-id new-id])
-                   #'(define-syntax (new-id stx)
-                       (syntax-parse stx
-                         [(_ a) #'(wrapper-id a)]
-                         [(_ a b) #'(wrapper-id a b)]
-                         [(_ a b . cs) #'(new-id (wrapper-id a b) . cs)]
-                         [new-id:id #'wrapper-id]))))
+                   (syntax-local-lift-module-end-declaration
+                    #'(define-syntax new-id
+                        (syntax-parser
+                           [(_ a) #'(wrapper-id a)]
+                           [(_ a b) #'(wrapper-id a b)]
+                           [(_ a b . cs) #'(wrapper-id a (new-id b . cs))]))))
+                 new-id]
+      [(#:left) (with-syntax ([wrapper-id wrapper-id]
+                              [new-id new-id])
+                  (syntax-local-lift-module-end-declaration
+                   #'(define-syntax new-id
+                        (syntax-parser
+                           [(_ a) #'(wrapper-id a)]
+                           [(_ a b) #'(wrapper-id a b)]
+                           [(_ a b . cs) #'(wrapper-id a (new-id b . cs))]))))
                 new-id]
       [else wrapper-id])))
+
+(define-syntax define-shen-function
+  (syntax-parser
+    [(_ (fn:id args ...) body:expr)
+     #:with spaced-fn ((make-interned-syntax-introducer 'function) #'fn)
+     #'(define (spaced-fn args ...) body)]
+    [(_ fn:id racket-fn:id)
+     #:with spaced-fn ((make-interned-syntax-introducer 'function) #'fn)
+     #'(define spaced-fn racket-fn)]))
 
 (define-syntax curry-out
   (make-provide-pre-transformer
@@ -42,24 +50,54 @@
        [(_ f:curry-out-export ...)
         #:with (wrapper-f ...)
                (stx-map
-                syntax-local-lift-expression
+                (lambda (stx)
+                  (let* ([wrapper-id (generate-temporary "wrapper")]
+                         [wrapper-id ((make-interned-syntax-introducer 'function) wrapper-id)])
+                    (with-syntax ([wrapper-id wrapper-id]
+                                  [stx stx])
+                      (syntax-local-lift-module-end-declaration
+                       #'(define wrapper-id stx)))
+                    wrapper-id))
                 #'(f.wrapper ...))
-        #:with (curried-f ...)
+        #:with (exports ...)
                (stx-map
                 (lambda (stx)
                   (match (syntax-e stx)
-                    [(cons assoc wrapper-id)
-                     (generate-variadic-macro-or-wrapper (syntax->datum assoc) wrapper-id)]))
-                #'((f.assoc . wrapper-f) ...))
+                    [(list assoc renamed-id curry-wrapper wrapper-id)
+                     (with-syntax ([macro-or-wrapper-id (generate-variadic-macro-or-wrapper (syntax->datum assoc) wrapper-id)]
+                                   [curry-wrapper curry-wrapper]
+                                   [renamed-id renamed-id])
+                       (syntax-local-lift-expression
+                        #'(hash-set! shen-function-bindings 'renamed-id curry-wrapper))
+                       (if (syntax->datum assoc)
+                           #'(rename-out [macro-or-wrapper-id renamed-id])
+                           #'(for-space function (rename-out [macro-or-wrapper-id renamed-id]))))]))
+                #'((f.assoc f.renamed-id f.wrapper wrapper-f) ...))
         (pre-expand-export
-         #'(rename-out [curried-f f.renamed-id] ...)
+         #'(combine-out exports ...)
+         modes)]))))
+
+(define-syntax shen-function-out
+  (make-provide-pre-transformer
+   (lambda (stx modes)
+     (syntax-parse stx
+       [(_ f:shen-function-out-export ...)
+        #:do [(stx-map
+               syntax-local-lift-module-end-declaration
+               #'((define-shen-function f.renamed-id f.func-id) ...))]
+        #:do [(stx-map
+               syntax-local-lift-expression
+               #'((hash-set! shen-function-bindings 'f.renamed-id f.func-id) ...))]
+        (pre-expand-export
+         #'(for-space function f.renamed-id ...)
          modes)]))))
 
 (define-syntax-parse-rule (shen-define name:id clause:clause-definition ...+)
   #:fail-unless (apply = (map length (attribute clause.pats)))
   "each clause must contain the same number of patterns"
   #:with (arg-id ...) (generate-temporaries (car (attribute clause.pats)))
-  (define name
+  #:with interned-name ((make-interned-syntax-introducer 'function) #'name)
+  (define interned-name
     (curry
      (lambda (arg-id ...)
        (match* (arg-id ...)
@@ -82,6 +120,11 @@
   (syntax-parse stx
     [(app)
      (syntax/loc stx empty)]
+    [(app . (proc-var:shen-var-id . args))
+     (syntax/loc stx ((function proc-var) . args))]
+    [(app . (proc:id . args))
+     #:with fs-proc ((make-interned-syntax-introducer 'function) #'proc)
+     (syntax/loc stx (#%app . (fs-proc . args)))]
     [(app . form)
      (syntax/loc stx (#%app . form))]))
 
@@ -93,13 +136,19 @@
   (syntax-case stx ()
     [_:id #'#f]))
 
-(define shen-variable-namespace
-  (make-empty-namespace))
+(define shen-variable-bindings
+  (make-hasheq))
+
+(define shen-function-bindings
+  (make-hasheq))
 
 (provide #%top-interaction
          #%datum
          curry-out
-         shen-variable-namespace
+         shen-function-out
+         define-shen-function
+         shen-function-bindings
+         shen-variable-bindings
          (rename-out [app #%app]
                      [top #%top]
                      [shen-true true]
