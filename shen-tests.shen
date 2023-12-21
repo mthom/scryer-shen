@@ -12,3 +12,6 @@
 (define test-4
   4 4 5 <- (fail-if (= 2) 2)
   4 4 X -> [success: X])
+
+(define test-5
+  X Y -> (X Y))

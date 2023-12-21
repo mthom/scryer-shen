@@ -109,25 +109,6 @@
 (define-syntax-parse-rule (shen-lambda id:shen-var-id ... body:expr)
   (lambda (id ...) body))
 
-(define-syntax (top stx)
-  (syntax-parse stx
-    [(top . id:shen-var-id)
-     #'(#%top . id)]
-    [(top . id:id)
-     (syntax/loc stx (quote id))]))
-
-(define-syntax (app stx)
-  (syntax-parse stx
-    [(app)
-     (syntax/loc stx empty)]
-    [(app . (proc-var:shen-var-id . args))
-     (syntax/loc stx ((function proc-var) . args))]
-    [(app . (proc:id . args))
-     #:with fs-proc ((make-interned-syntax-introducer 'function) #'proc)
-     (syntax/loc stx (#%app . (fs-proc . args)))]
-    [(app . form)
-     (syntax/loc stx (#%app . form))]))
-
 (define-syntax (shen-true stx)
   (syntax-case stx ()
     [_:id #'#t]))
@@ -149,9 +130,7 @@
          define-shen-function
          shen-function-bindings
          shen-variable-bindings
-         (rename-out [app #%app]
-                     [top #%top]
-                     [shen-true true]
+         (rename-out [shen-true true]
                      [shen-false false]
                      [shen-define define]
                      [shen-let let]

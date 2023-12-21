@@ -14,7 +14,6 @@
                      shen-function-out-export)
          (all-from-out "failure.rkt"))
 
-
 (begin-for-syntax
   (define (capitalized-symbol? symbol)
     (and (symbol? symbol)

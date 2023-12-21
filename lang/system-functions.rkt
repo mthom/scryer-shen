@@ -60,9 +60,12 @@
       (error "value: first parameter must be a symbol.")))
 
 (define (function var)
-  (if (symbol? var)
-      (hash-ref shen-function-bindings var)
-      (error "function: first parameter must be a symbol.")))
+  (cond [(symbol? var)
+         (hash-ref shen-function-bindings var)]
+        [(procedure? var)
+         var]
+        [else
+         (error "function: first parameter must be bound to a function.")]))
 
 (define (map fn list)
   (r:map (if (procedure? fn) fn (function fn)) list))
