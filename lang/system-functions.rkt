@@ -3,6 +3,8 @@
 (require racket/base
          (only-in racket
                   [map r:map])
+         (only-in racket/exn
+                  exn->string)
          "syntax-utils.rkt"
          (for-syntax syntax/id-table
                      syntax/parse)
@@ -90,6 +92,12 @@
 
 (define cn string-append)
 
+(define (difference list-1 list-2)
+  (filter (lambda (e) (not (member e list-2 equal?))) list-1))
+
+(define (element? e list)
+  (member e list equal?))
+
 ;; system functions manifest
 (provide (curry-out [+ #:arity 2 #:polyadic #:right]
                     [* #:arity 2 #:polyadic #:right]
@@ -108,19 +116,26 @@
                     [cons adjoin #:arity 2]
                     [append #:arity 2]
                     [map #:arity 2]
-                    [cn #:arity 2])
-         (rename-out [shen-and and]
+                    [cn #:arity 2]
+                    [difference #:arity 2]
+                    [element? #:arity 2])
+         (rename-out [begin do]
+                     [shen-and and]
                      [shen-or or])
          (shen-function-out [car hd]
                             cd
                             [cdr tl]
                             [vector? absvector?]
+                            [exn->string error-to-string]
                             arity
                             bound?
+                            empty?
+                            eval
                             function
                             symbol?
                             value)
          destroy
+         error
          set
          fail
          fail-if)
