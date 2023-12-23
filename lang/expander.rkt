@@ -8,8 +8,15 @@
                      racket/match
                      racket/provide-transform
                      racket/syntax
+                     syntax/id-table
                      syntax/parse
                      syntax/stx))
+
+(define shen-variable-bindings
+  (make-hasheq))
+
+(define shen-function-bindings
+  (make-hasheq))
 
 (begin-for-syntax
   (define (generate-variadic-macro-or-wrapper assoc wrapper-id [new-id (generate-temporary "wrapper-macro")])
@@ -51,13 +58,13 @@
         #:with (wrapper-f ...)
                (stx-map
                 (lambda (stx)
-                  (let* ([wrapper-id (generate-temporary "wrapper")]
-                         [wrapper-id ((make-interned-syntax-introducer 'function) wrapper-id)])
-                    (with-syntax ([wrapper-id wrapper-id]
+                  (let* ([old-wrapper-id (generate-temporary "wrapper")]
+                         [new-wrapper-id ((make-interned-syntax-introducer 'function) old-wrapper-id)])
+                    (with-syntax ([wrapper-id new-wrapper-id]
                                   [stx stx])
                       (syntax-local-lift-module-end-declaration
                        #'(define wrapper-id stx)))
-                    wrapper-id))
+                    new-wrapper-id))
                 #'(f.wrapper ...))
         #:with (exports ...)
                (stx-map
@@ -117,15 +124,7 @@
   (syntax-case stx ()
     [_:id #'#f]))
 
-(define shen-variable-bindings
-  (make-hasheq))
-
-(define shen-function-bindings
-  (make-hasheq))
-
-(provide #%top-interaction
-         #%datum
-         curry-out
+(provide curry-out
          shen-function-out
          define-shen-function
          shen-function-bindings

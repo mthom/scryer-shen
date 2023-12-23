@@ -4,7 +4,8 @@
          (only-in racket
                   [map r:map])
          "syntax-utils.rkt"
-         (for-syntax syntax/parse)
+         (for-syntax syntax/id-table
+                     syntax/parse)
          syntax/parse/define
          (only-in "expander.rkt"
                   curry-out
@@ -17,20 +18,34 @@
 ;; (define (@p . args) (cons '@p args))
 |#
 
-(define (and-wrapper value thunk)
-  (if value (thunk) #f))
+(define-syntax destroy
+  (syntax-parser
+    [(_ id:id)
+     #`(begin
+         (set! #,((make-interned-syntax-introducer 'function) #'id) (void))
+         (hash-remove! shen-function-bindings id))]
+    [(_ value) #'value]))
 
-(define (or-wrapper value thunk)
-  (if value #t (thunk)))
+(define and-wrapper
+  (curry
+   (lambda (value thunk)
+     (if value (thunk) #f))))
+
+(define or-wrapper
+  (curry
+   (lambda (value thunk)
+     (if value #t (thunk)))))
 
 (define-syntax (shen-and stx)
   (syntax-parse stx
+    [(_ a) #'(and-wrapper a)]
     [(_ a b) #'(and-wrapper a (thunk (if b #t #f)))]
     [(_ a b . cs) #'(and-wrapper a (thunk (shen-and b . cs)))]
     [_:id #'and-wrapper]))
 
 (define-syntax (shen-or stx)
   (syntax-parse stx
+    [(_ a) #'(or-wrapper a)]
     [(_ a b) #'(or-wrapper a (thunk (if b #t #f)))]
     [(_ a b . cs) #'(or-wrapper a (thunk (shen-or b . cs)))]
     [_:id #'or-wrapper]))
@@ -68,7 +83,7 @@
          (error "function: first parameter must be bound to a function.")]))
 
 (define (map fn list)
-  (r:map (if (procedure? fn) fn (function fn)) list))
+  (r:map (function fn) list))
 
 (define (cd string)
   (current-directory string))
@@ -105,6 +120,7 @@
                             function
                             symbol?
                             value)
+         destroy
          set
          fail
          fail-if)

@@ -4,8 +4,10 @@
          (only-in "system-functions.rkt" function)
          (for-syntax syntax/parse))
 
-(provide (rename-out [top #%top]
-                     [app #%app]))
+(provide (rename-out [app #%app]
+                     [top #%top])
+         #%datum
+         #%top-interaction)
 
 (define-syntax (top stx)
   (syntax-parse stx
