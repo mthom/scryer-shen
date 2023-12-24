@@ -5,20 +5,14 @@
                   [map r:map])
          (only-in racket/exn
                   exn->string)
-         "syntax-utils.rkt"
-         (for-syntax syntax/id-table
-                     syntax/parse)
-         syntax/parse/define
          (only-in "expander.rkt"
                   curry-out
                   shen-function-out
                   shen-function-bindings
-                  shen-variable-bindings))
-
-#|
-;; list and tuples
-;; (define (@p . args) (cons '@p args))
-|#
+                  shen-variable-bindings)
+         (for-syntax syntax/parse)
+         "syntax-utils.rkt"
+         syntax/parse/define)
 
 (define-syntax destroy
   (syntax-parser
@@ -130,12 +124,12 @@
                             arity
                             bound?
                             empty?
-                            eval
+                            [eval eval-kl]
                             function
                             symbol?
                             value)
          destroy
          error
-         set
          fail
-         fail-if)
+         fail-if
+         set)

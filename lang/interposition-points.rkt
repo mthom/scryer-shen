@@ -1,7 +1,8 @@
 #lang racket
 
 (require "syntax-utils.rkt"
-         (only-in "system-functions.rkt" function)
+         (only-in "system-functions.rkt"
+                  function)
          (for-syntax syntax/parse))
 
 (provide (rename-out [app #%app]

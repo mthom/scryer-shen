@@ -2,7 +2,7 @@
 
 (require racket/stxparam)
 
-(provide fail fail-if)
+(provide (protect-out fail fail-if))
 
 (define-values (struct:failure make-failure-object failure? failure-ref set-failure!)
   (make-struct-type 'failure #f 0 0))

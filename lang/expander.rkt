@@ -8,7 +8,6 @@
                      racket/match
                      racket/provide-transform
                      racket/syntax
-                     syntax/id-table
                      syntax/parse
                      syntax/stx))
 
@@ -91,24 +90,37 @@
        [(_ f:shen-function-out-export ...)
         #:do [(stx-map
                syntax-local-lift-module-end-declaration
-               #'((define-shen-function f.renamed-id f.func-id) ...))]
-        #:do [(stx-map
+               #'((define-shen-function f.renamed-id f.func-id) ...))
+              (stx-map
                syntax-local-lift-expression
                #'((hash-set! shen-function-bindings 'f.renamed-id f.func-id) ...))]
         (pre-expand-export
          #'(for-space function f.renamed-id ...)
          modes)]))))
 
-(define-syntax-parse-rule (shen-define name:id clause:clause-definition ...+)
-  #:fail-unless (apply = (map length (attribute clause.pats)))
-  "each clause must contain the same number of patterns"
-  #:with (arg-id ...) (generate-temporaries (car (attribute clause.pats)))
-  #:with interned-name ((make-interned-syntax-introducer 'function) #'name)
-  (define interned-name
-    (curry
-     (lambda (arg-id ...)
-       (match* (arg-id ...)
-         clause.match-clause ...)))))
+(define-syntax shen-define
+  (syntax-parser
+    [(shen-define name:id clause:clause-definition ...+)
+     #:fail-unless (apply = (map length (attribute clause.pats)))
+     "each clause must contain the same number of patterns"
+     #:with (arg-id ...) (generate-temporaries (car (attribute clause.pats)))
+     #:with interned-name ((make-interned-syntax-introducer 'function) #'name)
+     #'(define interned-name
+         (curry
+          (lambda (arg-id ...)
+            (match* (arg-id ...)
+              clause.match-clause ...))))]
+    [shen-define:id #''shen-define]))
+
+(define-syntax kl-defun
+  (syntax-parser
+    [(_ name:id (args:shen-var-id ...) body-exprs:expr ...+)
+     #:with interned-name ((make-interned-syntax-introducer 'function) #'name)
+     #'(define interned-name
+         (curry
+          (lambda (args ...)
+            body-exprs ...)))]
+    [defun:id #''defun]))
 
 (define-syntax-parse-rule (shen-let b:shen-binding ...+ body:expr)
   (let* ([b.id b.expr] ...) body))
@@ -124,12 +136,12 @@
   (syntax-case stx ()
     [_:id #'#f]))
 
-(provide curry-out
-         shen-function-out
-         define-shen-function
-         shen-function-bindings
-         shen-variable-bindings
-         (rename-out [shen-true true]
+(provide (protect-out curry-out
+                      shen-function-out
+                      shen-function-bindings
+                      shen-variable-bindings)
+         (rename-out [kl-defun defun]
+                     [shen-true true]
                      [shen-false false]
                      [shen-define define]
                      [shen-let let]

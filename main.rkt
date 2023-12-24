@@ -2,13 +2,18 @@
 
 (compile-allow-set!-undefined #t)
 
-(require "lang/reader.rkt"
-         "lang/expander.rkt"
-         "lang/system-functions.rkt"
-         "lang/interposition-points.rkt")
+(require "lang/expander.rkt"
+         "lang/interposition-points.rkt"
+         "lang/reader.rkt"
+         "lang/system-functions.rkt")
 
 (provide (all-from-out "lang/reader.rkt"
-                       "lang/expander.rkt"
                        "lang/system-functions.rkt"
                        "lang/interposition-points.rkt")
+         true
+         false
+         let
+         /.
+         define
+         defun
          #%module-begin)
