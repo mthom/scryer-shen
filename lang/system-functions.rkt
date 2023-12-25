@@ -55,7 +55,8 @@
 (define-syntax set
   (syntax-parser
     [(_ id:id value:expr)
-     #'(hash-set! shen-variable-bindings id value)]))
+     #'(hash-set! shen-variable-bindings id value)]
+    [id:id #''id]))
 
 (define (arity proc)
   (let ([arity (procedure-arity proc)])

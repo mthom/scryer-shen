@@ -112,7 +112,9 @@
     [(shen-define name:id clause:clause-definition ...+)
      #:fail-unless (apply = (map length (attribute clause.pats)))
      "each clause must contain the same number of patterns"
-     #:with (arg-id ...) (generate-temporaries (car (attribute clause.pats)))
+     #:with (arg-id ...) (stx-map
+                          (lambda (stx) (syntax-property stx 'bound #t))
+                          (generate-temporaries (car (attribute clause.pats))))
      #:with wrapper #'(curry
                        (lambda (arg-id ...)
                          (match* (arg-id ...)

@@ -15,3 +15,6 @@
 
 (define test-5
   X Y -> (X Y))
+
+(define test-6
+  X -> Y)

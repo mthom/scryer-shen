@@ -13,7 +13,9 @@
 (define-syntax (top stx)
   (syntax-parse stx
     [(top . id:shen-var-id)
-     #'(#%top . id)]
+     (if (syntax-property #'id 'bound)
+         #'(#%top . id)
+         (syntax/loc stx (quote id)))]
     [(top . id:id)
      (syntax/loc stx (quote id))]))
 
