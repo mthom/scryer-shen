@@ -25,7 +25,8 @@
          (namespace-undefine-variable! 'id shen-namespace)
          (namespace-undefine-variable! 'id kl-namespace)
          (hash-remove! shen-function-bindings id))]
-    [(_ value) #'value]))
+    [(_ value) #'value]
+    [id:id #''id]))
 
 (define and-wrapper
   (curry
