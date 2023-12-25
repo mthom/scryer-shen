@@ -1,8 +1,8 @@
 #lang racket
 
-(require racket/base
-         (only-in racket
-                  [map r:map])
+(require (only-in racket
+                  [map r:map]
+                  [eval r:eval])
          (only-in racket/exn
                   exn->string)
          (only-in "expander.rkt"
@@ -10,7 +10,10 @@
                   shen-function-out
                   shen-function-bindings
                   shen-variable-bindings)
+         (only-in racket/syntax
+                  format-id)
          (for-syntax syntax/parse)
+         "namespaces.rkt"
          "syntax-utils.rkt"
          syntax/parse/define)
 
@@ -19,6 +22,8 @@
     [(_ id:id)
      #`(begin
          (set! #,((make-interned-syntax-introducer 'function) #'id) (void))
+         (namespace-undefine-variable! 'id shen-namespace)
+         (namespace-undefine-variable! 'id kl-namespace)
          (hash-remove! shen-function-bindings id))]
     [(_ value) #'value]))
 
@@ -92,6 +97,15 @@
 (define (element? e list)
   (member e list equal?))
 
+(define (eval-kl expr)
+  (r:eval expr
+          (if (and (cons? expr) (eq? 'defun (first expr)))
+              (current-namespace)
+              kl-namespace)))
+
+(define (eval expr)
+  (r:eval expr))
+
 ;; system functions manifest
 (provide (curry-out [+ #:arity 2 #:polyadic #:right]
                     [* #:arity 2 #:polyadic #:right]
@@ -123,8 +137,10 @@
                             [exn->string error-to-string]
                             arity
                             bound?
+                            cons?
                             empty?
-                            [eval eval-kl]
+                            eval
+                            eval-kl
                             function
                             symbol?
                             value)
