@@ -38,19 +38,24 @@
    (lambda (value thunk)
      (if value #t (thunk)))))
 
-(define-syntax (shen-and stx)
-  (syntax-parse stx
+(define-syntax shen-and
+  (syntax-parser
     [(_ a) #'(and-wrapper a)]
     [(_ a b) #'(and-wrapper a (thunk (if b #t #f)))]
     [(_ a b . cs) #'(and-wrapper a (thunk (shen-and b . cs)))]
     [_:id #'and-wrapper]))
 
-(define-syntax (shen-or stx)
-  (syntax-parse stx
+(define-syntax shen-or
+  (syntax-parser
     [(_ a) #'(or-wrapper a)]
     [(_ a b) #'(or-wrapper a (thunk (if b #t #f)))]
     [(_ a b . cs) #'(or-wrapper a (thunk (shen-or b . cs)))]
     [_:id #'or-wrapper]))
+
+(define-syntax set
+  (syntax-parser
+    [(_ id:id value:expr)
+     #'(hash-set! shen-variable-bindings id value)]))
 
 (define (arity proc)
   (let ([arity (procedure-arity proc)])
@@ -65,11 +70,6 @@
           (hash-ref shen-variable-bindings var)
           #t))
       (error "bound?: first parameter must be a symbol.")))
-
-(define-syntax set
-  (syntax-parser
-    [(_ id:id value:expr)
-     #'(hash-set! shen-variable-bindings id value)]))
 
 (define (value key)
   (if (symbol? key)
