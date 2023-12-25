@@ -10,7 +10,7 @@
 (provide (for-syntax clause-definition
                      shen-binding
                      shen-var-id
-                     curry-out-export
+                     shen-curry-out-export
                      shen-function-out-export)
          (all-from-out "failure.rkt"))
 
@@ -80,7 +80,7 @@
                                                                        result)))])])
                                body)]))
 
-  (define-syntax-class curry-out-export
+  (define-syntax-class shen-curry-out-export
     #:attributes (func-id renamed-id wrapper assoc)
     (pattern [(~seq func-id:id (~optional renamed-id:id #:defaults ([renamed-id #'func-id]))
                     #:arity wrapped-arity:nat

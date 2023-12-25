@@ -6,7 +6,7 @@
          (only-in racket/exn
                   exn->string)
          (only-in "expander.rkt"
-                  curry-out
+                  shen-curry-out
                   shen-function-out
                   shen-function-bindings
                   shen-variable-bindings)
@@ -109,26 +109,26 @@
   (r:eval expr))
 
 ;; system functions manifest
-(provide (curry-out [+ #:arity 2 #:polyadic #:right]
-                    [* #:arity 2 #:polyadic #:right]
-                    [- #:arity 2]
-                    [/ #:arity 2]
-                    [> #:arity 2]
-                    [< #:arity 2]
-                    [equal? = #:arity 2]
-                    [equal? == #:arity 2]
-                    [>= #:arity 2]
-                    [<= #:arity 2]
-                    [make-vector absvector #:arity 1]
-                    [vector-ref <-address #:arity 2]
-                    [vector-set! address-> #:arity 3]
-                    [cons #:arity 2]
-                    [cons adjoin #:arity 2]
-                    [append #:arity 2]
-                    [map #:arity 2]
-                    [cn #:arity 2]
-                    [difference #:arity 2]
-                    [element? #:arity 2])
+(provide (shen-curry-out [+ #:arity 2 #:polyadic #:right]
+                         [* #:arity 2 #:polyadic #:right]
+                         [- #:arity 2]
+                         [/ #:arity 2]
+                         [> #:arity 2]
+                         [< #:arity 2]
+                         [equal? = #:arity 2]
+                         [equal? == #:arity 2]
+                         [>= #:arity 2]
+                         [<= #:arity 2]
+                         [make-vector absvector #:arity 1]
+                         [vector-ref <-address #:arity 2]
+                         [vector-set! address-> #:arity 3]
+                         [cons #:arity 2]
+                         [cons adjoin #:arity 2]
+                         [append #:arity 2]
+                         [map #:arity 2]
+                         [cn #:arity 2]
+                         [difference #:arity 2]
+                         [element? #:arity 2])
          (rename-out [begin do]
                      [shen-and and]
                      [shen-or or])

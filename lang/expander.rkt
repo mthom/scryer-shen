@@ -58,11 +58,11 @@
          (namespace-set-variable-value! 'fn non-spaced-fn #t kl-namespace)
          (namespace-set-variable-value! 'fn non-spaced-fn #t shen-namespace))]))
 
-(define-syntax curry-out
+(define-syntax shen-curry-out
   (make-provide-pre-transformer
    (lambda (stx modes)
      (syntax-parse stx
-       [(_ f:curry-out-export ...)
+       [(_ f:shen-curry-out-export ...)
         #:with (wrapper-f ...)
                (stx-map
                 (lambda (stx)
@@ -145,7 +145,7 @@
   (syntax-case stx ()
     [_:id #'#f]))
 
-(provide (protect-out curry-out
+(provide (protect-out shen-curry-out
                       shen-function-out
                       shen-function-bindings
                       shen-variable-bindings
