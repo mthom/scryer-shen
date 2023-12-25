@@ -24,7 +24,6 @@
          let
          /.
          define
-         (rename-out [kl-defun defun])
-         require syntax
-         (rename-out [shen-mb #%module-begin]))
+         (rename-out [kl-defun defun]
+                     [shen-mb #%module-begin]))
 

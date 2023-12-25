@@ -135,7 +135,7 @@
   (let* ([b.id b.expr] ...) body))
 
 (define-syntax-parse-rule (shen-lambda id:shen-var-id ... body:expr)
-  (lambda (id ...) body))
+  (curry (lambda (id ...) body)))
 
 (define-syntax (shen-true stx)
   (syntax-case stx ()
