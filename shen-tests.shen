@@ -18,3 +18,7 @@
 
 (define test-6
   X -> Y)
+
+(define head
+  [X| Y] -> X
+  [] -> (error "head: empty list"))

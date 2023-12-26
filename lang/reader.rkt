@@ -30,8 +30,8 @@
   (define shen-readtable
     (make-readtable #f
                     #\[ 'terminating-macro read-list
-                    ;; parse #\| like an ordinary character.
-                    #\| #\a #f))
+                    ;; parse #\| as a standalone character.
+                    #\| 'terminating-macro (const #\|)))
 
   (define (consume-spaces in)
     (define ch (peek-char in))
