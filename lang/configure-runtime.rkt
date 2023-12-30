@@ -2,9 +2,8 @@
 
 (provide configure)
 
-(require "reader.rkt" "printer.rkt"
-         (only-in racket [read-syntax r:read-syntax])
-         syntax/strip-context)
+(require (only-in "reader.rkt" shen-readtable)
+         "printer.rkt")
 
 (define (configure data)
   (global-port-print-handler shen-printer)
@@ -12,4 +11,4 @@
 
 (define (read-one-line origin port)
   (parameterize ([current-readtable shen-readtable])
-    (strip-context (r:read-syntax origin port))))
+    (read-syntax origin port)))

@@ -4,6 +4,7 @@
                      racket/function
                      racket/match
                      syntax/parse)
+         "shen-cons.rkt"
          "failure.rkt"
          racket/stxparam)
 
@@ -22,8 +23,8 @@
 
   (define (quote-empty-lists pattern)
     (match (syntax-e pattern)
-      [(list cons-symbol hd tl)
-       #:when (eq? (syntax->datum cons-symbol) 'cons)
+      [(list shen-cons-symbol hd tl)
+       #:when (free-identifier=? #'shen-cons shen-cons-symbol)
        (quasisyntax/loc pattern (cons #,(quote-empty-lists hd)
                                       #,(quote-empty-lists tl)))]
       ['() (syntax/loc pattern (quote ()))]

@@ -20,5 +20,13 @@
   X -> Y)
 
 (define head
-  [X| Y] -> X
+  [X | Y] -> X
   [] -> (error "head: empty list"))
+
+(define second
+  [_ Y | _] -> Y)
+
+(define identity
+  X -> X)
+
+(identity 1)

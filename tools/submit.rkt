@@ -29,10 +29,10 @@
                  (let-values ([(line col pos) (port-next-location ip)])
                    (raise-read-error "expected an opening '('" #f line col pos 1))
                  (loop #f))))]
-      [(eqv? c #\|) (loop #f)] 
+      [(eqv? c #\|) (loop #f)]
       [(eqv? c #\newline) (if (= paren-stack-depth 0)
                               (loop #f)
-                              (loop #f))]     
+                              (loop #f))]
       [(char-whitespace? c) (loop #f)]
       [else (loop #f)])))
 

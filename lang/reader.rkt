@@ -16,21 +16,34 @@
 
   (require racket
            racket/generator
-           syntax/readerr)
+           syntax/readerr
+           "shen-cons.rkt")
 
   (provide shen-readtable)
 
-  (define read-list
+  (define (shen-cons-fold list-items)
+    (foldr (lambda (item acc) (if (void? acc) item (datum->syntax #f (list #'shen-cons item acc))))
+           (void)
+           (syntax->list list-items)))
+
+  (define (read-list)
+    (define outer-scope (make-syntax-introducer #t))
     (case-lambda
       [(ch in)
-       (read-list-items in (object-name in))]
+       (define inner-scope (make-syntax-introducer))
+       (syntax->datum
+        (outer-scope
+         (inner-scope
+          (shen-cons-fold (inner-scope (outer-scope (read-list-items in (object-name in))))))))]
       [(ch in src line col pos)
-       (read-list-items in src)]))
+       (define inner-scope (make-syntax-introducer))
+       (outer-scope
+        (inner-scope
+         (shen-cons-fold (inner-scope (outer-scope (read-list-items in src))))))]))
 
   (define shen-readtable
     (make-readtable #f
-                    #\[ 'terminating-macro read-list
-                    ;; parse #\| as a standalone character.
+                    #\[ 'terminating-macro (read-list)
                     #\| 'terminating-macro (const #\|)))
 
   (define (consume-spaces in)
@@ -40,28 +53,25 @@
       (consume-spaces in)))
 
   (define (read-list-items in [src #f])
-    (define list-contents
-      (for/list ([term (in-generator
-                        (let loop ()
-                          (consume-spaces in)
-                          (case (peek-char in)
-                            ([#\]] (read-char in)
-                                   (yield '())
-                                   (yield (void)))
-                            ([#\|] (read-char in)
-                                   (consume-spaces in)
-                                   (let ([term (read in)])
-                                     (consume-spaces in)
-                                     (if (equal? (peek-char in) #\])
-                                         (yield term)
-                                         (let-values ([(line col pos) (port-next-location in)])
-                                           (raise-read-error "expected a closing ']'" src line col pos 1))))
-                                   (read-char in)
-                                   (yield (void)))
-                            (else (yield (read in))))
-                          (loop)))]
-                 #:break (void? term))
-        term))
-    (foldr (lambda (item list) (if (void? list) item `(cons ,item ,list)))
-           (void)
-           list-contents)))
+    (datum->syntax #f
+                   (for/list ([term (in-generator
+                                     (let loop ()
+                                       (consume-spaces in)
+                                       (case (peek-char in)
+                                         ([#\]] (read-char in)
+                                                (yield (datum->syntax #f '()))
+                                                (yield (void)))
+                                         ([#\|] (read-char in)
+                                                (consume-spaces in)
+                                                (let ([term (read-syntax/recursive src in)])
+                                                  (consume-spaces in)
+                                                  (if (equal? (peek-char in) #\])
+                                                      (yield term)
+                                                      (let-values ([(line col pos) (port-next-location in)])
+                                                        (raise-read-error "expected a closing ']'" src line col pos 1))))
+                                                (read-char in)
+                                                (yield (void)))
+                                         (else (yield (read-syntax/recursive src in))))
+                                       (loop)))]
+                              #:break (void? term))
+                     term))))
