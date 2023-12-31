@@ -1,6 +1,7 @@
 #lang racket
 
-(require "namespaces.rkt"
+(require "macros.rkt"
+         "namespaces.rkt"
          racket/stxparam
          syntax/parse/define
          "syntax-utils.rkt"
@@ -9,6 +10,7 @@
                      racket/match
                      racket/provide-transform
                      racket/syntax
+                     racket/stxparam
                      syntax/parse
                      syntax/stx))
 
@@ -31,7 +33,7 @@
                            [(_ a) #'(wrapper-id a)]
                            [(_ a b) #'(wrapper-id a b)]
                            [(_ a b . cs) #'(wrapper-id a (new-id b . cs))]
-                           [_:id #''renamed-id]))))
+                           [_:id #'renamed-id]))))
                  new-id]
       [(#:left) (with-syntax ([wrapper-id wrapper-id]
                               [new-id new-id]
@@ -42,7 +44,7 @@
                            [(_ a) #'(wrapper-id a)]
                            [(_ a b) #'(wrapper-id a b)]
                            [(_ a b . cs) #'(wrapper-id a (new-id b . cs))]
-                           [_:id #''renamed-id]))))
+                           [_:id #'renamed-id]))))
                 new-id]
       [else wrapper-id])))
 
@@ -54,9 +56,20 @@
      #'(begin
          (define non-spaced-fn racket-fn)
          (define spaced-fn non-spaced-fn)
+
          (hash-set! shen-function-bindings 'fn non-spaced-fn)
+
          (namespace-set-variable-value! 'fn non-spaced-fn #t kl-namespace)
          (namespace-set-variable-value! 'fn non-spaced-fn #t shen-namespace))]))
+
+(define-syntax define-shen-function-for-syntax
+  (syntax-parser
+    [(_ fn:id racket-fn)
+     #:with spaced-fn ((make-interned-syntax-introducer 'function) #'fn)
+     #:with non-spaced-fn (generate-temporary "non-spaced-wrapper")
+     #'(begin-for-syntax
+         (define non-spaced-fn racket-fn)
+         (define spaced-fn non-spaced-fn))]))
 
 (define-syntax shen-curry-out
   (make-provide-pre-transformer
@@ -107,9 +120,10 @@
          #'(for-space function f.renamed-id ...)
          modes)]))))
 
-(define-syntax shen-define
-  (syntax-parser
-    [(shen-define name:id clause:clause-definition ...+)
+(define-syntax (shen-define stx)
+  (syntax-parse stx
+    [(shen-define name:id clause:function-clause-definition ...+)
+     #:when (syntax-property stx 'expanded)
      #:fail-unless (apply = (map length (attribute clause.pats)))
      "each clause must contain the same number of patterns"
      #:with (arg-id ...) (stx-map
@@ -119,16 +133,44 @@
                        (lambda (arg-id ...)
                          (match* (arg-id ...)
                            clause.match-clause ...)))
-     #'(define-shen-function name wrapper)]
+     #'(begin
+         (define-shen-function name wrapper)
+         (define-shen-function-for-syntax name wrapper))]
+    [shen-define-decl
+     (expand-shen-form #'shen-define-decl)]
     [shen-define:id #''shen-define]))
 
-(define-syntax kl-defun
-  (syntax-parser
+(define-syntax (shen-defmacro stx)
+  (syntax-parse stx
+    [(shen-defmacro name:id clause:macro-clause-definition ...+)
+     #:when (syntax-property stx 'expanded)
+     #:with arg-id (generate-temporary "form")
+     #'(begin-for-syntax
+         (define (name k)
+           (lambda (arg-id)
+             (match arg-id
+               clause.match-clause
+               ...
+               [_ (k arg-id)])))
+
+         (add-shen-macro-expander! name))]
+    [shen-defmacro-decl
+     (expand-shen-form #'shen-defmacro-decl)]
+    [defmacro:id #''defmacro]))
+
+(define-syntax (kl-defun stx)
+  (syntax-parse stx
     [(_ name:id (args:shen-var-id ...) body-exprs:expr ...+)
+     #:when (syntax-property stx 'expanded)
+     #:do [(stx-map
+            (lambda (stx) (syntax-property stx 'bound #t))
+            #'(args ...))]
      #:with wrapper #'(curry
                        (lambda (args ...)
                          body-exprs ...))
      #'(define-shen-function name wrapper)]
+    [kl-defun-decl
+     (expand-shen-form #'kl-defun-decl)]
     [defun:id #''defun]))
 
 (define-syntax-parse-rule (shen-let b:shen-binding ...+ body:expr)
@@ -154,4 +196,5 @@
                      [shen-false false]
                      [shen-define define]
                      [shen-let let]
-                     [shen-lambda /.]))
+                     [shen-lambda /.]
+                     [shen-defmacro defmacro]))

@@ -1,19 +1,24 @@
 #lang racket
 
-(require (for-syntax racket/base
+(require (for-syntax "failure.rkt"
+                     racket/base
                      racket/function
                      racket/match
+                     racket/stxparam
                      syntax/parse)
-         "shen-cons.rkt"
          "failure.rkt"
+         "macros.rkt"
+         "shen-cons.rkt"
          racket/stxparam)
 
-(provide (for-syntax clause-definition
+(provide (for-syntax function-clause-definition
+                     macro-clause-definition
                      shen-binding
                      shen-var-id
                      shen-curry-out-export
                      shen-function-out-export)
-         (all-from-out "failure.rkt"))
+         (all-from-out "failure.rkt"
+                       "macros.rkt"))
 
 (begin-for-syntax
   (define (capitalized-symbol? symbol)
@@ -21,44 +26,76 @@
          (let ([string (symbol->string symbol)])
            (char-upper-case? (string-ref string 0)))))
 
-  (define (quote-empty-lists pattern)
+  (define (quote-pattern pattern)
     (match (syntax-e pattern)
       [(list shen-cons-symbol hd tl)
        #:when (free-identifier=? #'shen-cons shen-cons-symbol)
-       (quasisyntax/loc pattern (cons #,(quote-empty-lists hd)
-                                      #,(quote-empty-lists tl)))]
+       (quasisyntax/loc pattern (cons #,(quote-pattern hd)
+                                      #,(quote-pattern tl)))]
       ['() (syntax/loc pattern (quote ()))]
       ['_ pattern]
       [(? (compose not capitalized-symbol?))
        (quasisyntax/loc pattern (quote #,pattern))]
       [_ pattern]))
 
+  (define (quote-macro-expr pattern)
+    (define (stx-pair->syntax obj)
+      (if (syntax? obj)
+          obj
+          (datum->syntax #f obj)))
+
+    (match (syntax-e pattern)
+      [(list shen-cons-symbol hd tl)
+       #:when (free-identifier=? #'shen-cons shen-cons-symbol)
+       (quasisyntax/loc pattern (cons #,(quote-macro-expr hd)
+                                      #,(quote-macro-expr tl)))]
+      [(cons hd tl)
+       (datum->syntax
+        pattern
+        (cons (quote-macro-expr hd)
+              (quote-macro-expr (stx-pair->syntax tl)))
+        pattern)]
+      [_ pattern]))
+
   (define-syntax-class shen-var-id
     (pattern (~and id:id (~fail #:unless (capitalized-symbol? (syntax->datum #'id))))))
 
-  (define-syntax-class clause-pattern
+  (define-syntax-class function-clause-pattern
     #:attributes (pat)
     #:datum-literals (-> <-)
     (pattern (~and (~not ->) (~not <-))
-      #:with pat (quote-empty-lists this-syntax))
+      #:with pat (quote-pattern this-syntax))
     (pattern (~or (->) (<-))
       #:with pat this-syntax))
 
+  (define-syntax-class macro-clause-pattern
+    #:attributes (pat)
+    #:datum-literals (->)
+    (pattern (~not ->)
+      #:with pat (quote-pattern this-syntax)))
+
   (define-syntax-class shen-op-assoc
     (pattern (~or #:right #:left)))
+
+  (define-splicing-syntax-class macro-clause-definition
+    #:attributes (match-clause)
+    #:datum-literals (->)
+    (pattern (~seq pat:macro-clause-pattern -> pre-quoted-body:expr)
+      #:with body (quote-macro-expr #'pre-quoted-body)
+      #:with match-clause #'[pat.pat body]))
 
   (define-splicing-syntax-class shen-binding
     #:attributes (id expr)
     (pattern (~seq id:shen-var-id expr:expr)))
 
-  (define-splicing-syntax-class clause-definition
+  (define-splicing-syntax-class function-clause-definition
     #:attributes ((pats 1) match-clause)
     #:datum-literals (-> <- where)
-    (pattern (~seq pats:clause-pattern ... -> body:expr
+    (pattern (~seq pats:function-clause-pattern ... -> body:expr
                    (~optional (~seq where guard:expr)
                               #:defaults ([guard #'#t])))
       #:with match-clause #'[(pats.pat ...) #:when guard body])
-    (pattern (~seq pats:clause-pattern ... <- body:expr
+    (pattern (~seq pats:function-clause-pattern ... <- body:expr
                    (~optional (~seq where guard:expr)
                               #:defaults ([guard #'#t])))
       #:with match-clause #'[(pats.pat ...)
@@ -66,7 +103,7 @@
                              (unless guard (backtrack-fn))
                              (syntax-parameterize ([fail (syntax-id-rules (backtrack-fn)
                                                            [(fail) (backtrack-fn)]
-                                                           [fail backtrack-fn])]
+                                                           [fail fail])]
                                                    [fail-if (syntax-id-rules (backtrack-fn)
                                                               [(fail-if fail-fn r)
                                                                (let ([result r])

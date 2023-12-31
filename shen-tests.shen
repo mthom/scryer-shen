@@ -6,7 +6,7 @@
   4 4 X -> (* X X))
 
 (define test-3
-  X -> (let Y (+ 1 1)
+  X -> (let Y (+ 1 (log 2))
          (+ Y X)))
 
 (define test-4
@@ -30,3 +30,17 @@
   X -> X)
 
 (identity 1)
+
+(defmacro log-macro
+  [log N] -> [+ N 10])
+
+(define max
+  X Y -> X where (> X Y)
+  _ Y -> Y)
+
+(defmacro max-macro
+  [max X Y Z | W] -> [max X [max Y Z | W]])
+
+(defmacro add1-macro
+  [add1-ct X] -> (let Y [+ X 1]
+                   [identity Y]))

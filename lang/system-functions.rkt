@@ -6,16 +6,15 @@
          (only-in racket/exn
                   exn->string)
          (only-in "expander.rkt"
-                  shen-curry-out
-                  shen-function-out
                   shen-function-bindings
                   shen-variable-bindings)
-         (only-in racket/syntax
-                  format-id)
-         (for-syntax syntax/parse)
+         (only-in "failure.rkt"
+                  fail
+                  fail-if)
          "namespaces.rkt"
-         "syntax-utils.rkt"
-         syntax/parse/define)
+         (for-syntax syntax/parse))
+
+(provide (all-defined-out))
 
 (define-syntax destroy
   (syntax-parser
@@ -108,46 +107,9 @@
 (define (eval expr)
   (r:eval expr))
 
-;; system functions manifest
-(provide (shen-curry-out [+ #:arity 2 #:polyadic #:right]
-                         [* #:arity 2 #:polyadic #:right]
-                         [- #:arity 2]
-                         [/ #:arity 2]
-                         [> #:arity 2]
-                         [< #:arity 2]
-                         [equal? = #:arity 2]
-                         [equal? == #:arity 2]
-                         [>= #:arity 2]
-                         [<= #:arity 2]
-                         [make-vector absvector #:arity 1]
-                         [vector-ref <-address #:arity 2]
-                         [vector-set! address-> #:arity 3]
-                         [cons #:arity 2]
-                         [cons adjoin #:arity 2]
-                         [append #:arity 2]
-                         [map #:arity 2]
-                         [cn #:arity 2]
-                         [difference #:arity 2]
-                         [element? #:arity 2])
-         (rename-out [begin do]
-                     [shen-and and]
-                     [shen-or or])
-         (shen-function-out [car hd]
-                            cd
-                            [cdr tl]
-                            [vector? absvector?]
-                            [exn->string error-to-string]
-                            arity
-                            bound?
-                            cons?
-                            empty?
-                            eval
-                            eval-kl
-                            function
-                            symbol?
-                            value)
-         destroy
-         error
-         fail
-         fail-if
-         set)
+(define error-to-string exn->string)
+
+(define (concat x y)
+  (if (and (symbol? x) (symbol? y))
+      (string->symbol (string-append (symbol->string x) (symbol->string y)))
+      (and x y)))

@@ -1,9 +1,9 @@
 (module reader syntax/module-reader
   #:language 'shen
+  #:language-info '#(shen/lang/lang-info get-info #f)
   #:wrapper1 (lambda (t)
                (parameterize ([current-readtable shen-readtable])
                  (t)))
-  #:language-info '#(shen/lang/lang-info get-info #f)
   #:info (lambda (key defval default)
            (case key
              [(drracket:default-filters) '(["Shen Sources" "*.shen"])]
@@ -14,7 +14,10 @@
               (dynamic-require 'shen/tools/colorer 'shen-colorer)]
              [else (default key defval)]))
 
-  (require racket
+  (require (only-in racket
+                    const
+                    [read r:read]
+                    [read-syntax r:read-syntax])
            racket/generator
            syntax/readerr
            "shen-cons.rkt")

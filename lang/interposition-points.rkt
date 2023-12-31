@@ -5,10 +5,18 @@
                   function)
          (for-syntax syntax/parse))
 
-(provide (rename-out [app #%app]
-                     [top #%top])
-         #%datum
-         #%top-interaction)
+(provide app
+         top
+         datum)
+
+(define-syntax (datum stx)
+  (syntax-parse stx
+    [(datum . x)
+     #:when (syntax-property #'x 'expanded)
+     (syntax/loc stx (#%datum . x))]
+    [(datum . x)
+     #:with expanded-form (expand-shen-form #'x)
+     (syntax/loc stx (#%datum . expanded-form))]))
 
 (define-syntax (top stx)
   (syntax-parse stx
@@ -25,6 +33,10 @@
      (syntax/loc stx empty)]
     [(app . (proc-var:shen-var-id . args))
      (syntax/loc stx (#%app . ((app function proc-var) . args)))]
+    [(app . form)
+     #:when (not (syntax-property #'form 'expanded))
+     #:with expanded-form (expand-shen-form #'form)
+     (quasisyntax/loc stx (app . expanded-form))]
     [(app . (proc:id . args))
      #:with fs-proc ((make-interned-syntax-introducer 'function) #'proc)
      (syntax/loc stx (#%app . (fs-proc . args)))]
