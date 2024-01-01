@@ -122,55 +122,32 @@
 
 (define-syntax (shen-define stx)
   (syntax-parse stx
-    [(shen-define name:id clause:function-clause-definition ...+)
+    [(shen-define define-form:shen-define)
      #:when (syntax-property stx 'expanded)
-     #:fail-unless (apply = (map length (attribute clause.pats)))
-     "each clause must contain the same number of patterns"
-     #:with (arg-id ...) (stx-map
-                          (lambda (stx) (syntax-property stx 'bound #t))
-                          (generate-temporaries (car (attribute clause.pats))))
-     #:with wrapper #'(curry
-                       (lambda (arg-id ...)
-                         (match* (arg-id ...)
-                           clause.match-clause ...)))
      #'(begin
-         (define-shen-function name wrapper)
-         (define-shen-function-for-syntax name wrapper))]
-    [shen-define-decl
-     (expand-shen-form #'shen-define-decl)]
+         (define-shen-function define-form.name define-form.wrapper)
+         (define-shen-function-for-syntax define-form.name define-form.wrapper))]
+    [(shen-define define-form:shen-define)
+     (expand-shen-form #'(shen-define . define-form))]
     [shen-define:id #''shen-define]))
 
 (define-syntax (shen-defmacro stx)
   (syntax-parse stx
-    [(shen-defmacro name:id clause:macro-clause-definition ...+)
+    [(shen-defmacro defmacro:shen-defmacro)
      #:when (syntax-property stx 'expanded)
-     #:with arg-id (generate-temporary "form")
      #'(begin-for-syntax
-         (define (name k)
-           (lambda (arg-id)
-             (match arg-id
-               clause.match-clause
-               ...
-               [_ (k arg-id)])))
-
-         (add-shen-macro-expander! name))]
-    [shen-defmacro-decl
-     (expand-shen-form #'shen-defmacro-decl)]
+         (add-shen-macro-expander! defmacro.expander))]
+    [(shen-defmacro defmacro:shen-defmacro)
+     (expand-shen-form #'(shen-defmacro . defmacro))]
     [defmacro:id #''defmacro]))
 
 (define-syntax (kl-defun stx)
   (syntax-parse stx
-    [(_ name:id (args:shen-var-id ...) body-exprs:expr ...+)
+    [(kl-defun defun:kl-defun)
      #:when (syntax-property stx 'expanded)
-     #:do [(stx-map
-            (lambda (stx) (syntax-property stx 'bound #t))
-            #'(args ...))]
-     #:with wrapper #'(curry
-                       (lambda (args ...)
-                         body-exprs ...))
-     #'(define-shen-function name wrapper)]
-    [kl-defun-decl
-     (expand-shen-form #'kl-defun-decl)]
+     #'(define-shen-function defun.name defun.wrapper)]
+    [(kl-defun defun:kl-defun)
+     (expand-shen-form #'(kl-defun . defun))]
     [defun:id #''defun]))
 
 (define-syntax-parse-rule (shen-let b:shen-binding ...+ body:expr)

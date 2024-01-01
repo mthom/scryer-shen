@@ -4,8 +4,10 @@
                      racket/base
                      racket/function
                      racket/match
+                     racket/syntax
                      racket/stxparam
-                     syntax/parse)
+                     syntax/parse
+                     syntax/stx)
          "failure.rkt"
          "macros.rkt"
          "shen-cons.rkt"
@@ -16,7 +18,10 @@
                      shen-binding
                      shen-var-id
                      shen-curry-out-export
-                     shen-function-out-export)
+                     shen-function-out-export
+                     shen-define
+                     kl-defun
+                     shen-defmacro)
          (all-from-out "failure.rkt"
                        "macros.rkt"))
 
@@ -117,6 +122,54 @@
                                                                        (backtrack-fn)
                                                                        result)))])])
                                body)]))
+
+  (define-splicing-syntax-class shen-define
+    #:attributes (name wrapper)
+    (pattern (~seq name:id clause:function-clause-definition ...+)
+      #:fail-unless (apply = (map length (attribute clause.pats)))
+      "each clause must contain the same number of patterns"
+      #:with pats (attribute clause.pats)
+      #:with (arg-id ...) (stx-map
+                           (lambda (stx) (syntax-property stx 'bound #t))
+                           (generate-temporaries (car (attribute clause.pats))))
+      #:with wrapper #'(curry
+                        (lambda (arg-id ...)
+                          (match* (arg-id ...)
+                            clause.match-clause ...)))))
+
+  (define-splicing-syntax-class kl-defun
+    #:attributes (name wrapper)
+    (pattern (~seq name:id (args:shen-var-id ...) body-exprs:expr ...+)
+      #:do [(stx-map
+             (lambda (stx) (syntax-property stx 'bound #t))
+             #'(args ...))]
+      #:with wrapper #'(curry
+                        (lambda (args ...)
+                          body-exprs ...))))
+
+  (define-splicing-syntax-class shen-defmacro
+    #:attributes (name expander)
+    (pattern (~seq name:id clause:macro-clause-definition ...+)
+      #:with arg-id (generate-temporary "form")
+      #:with expander #'(lambda (k)
+                          (lambda (arg-id)
+                            (match arg-id
+                              clause.match-clause
+                              ...
+                              [_ (k arg-id)])))))
+
+  (define-syntax-class shen-top-level-decl
+    #:literals (define defun defmacro)
+    #:attributes (name expansion)
+    (pattern (define define-form:shen-define)
+      #:with expansion #'(define . define-form)
+      #:with name (attribute define-form.name))
+    (pattern (defun defun-form:kl-defun)
+      #:with expansion #'(defun . defun-form)
+      #:with name (attribute defun-form.name))
+    (pattern (defmacro defmacro-form:shen-defmacro)
+      #:with expansion #'(defmacro . defmacro-form)
+      #:with name (attribute defmacro-form.name)))
 
   (define-syntax-class shen-curry-out-export
     #:attributes (func-id renamed-id wrapper assoc)
