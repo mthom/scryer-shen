@@ -171,6 +171,25 @@
       #:with expansion #'(defmacro . defmacro-form)
       #:with name (attribute defmacro-form.name)))
 
+  (define-splicing-syntax-class shen-package
+    #:datum-literals (append external intern)
+    #:attributes (pkg-name
+                  external-package-specs
+                  internal-provide-specs
+                  package-require-specs
+                  (top-level-decls 1))
+    (pattern (~seq pkg-name:id
+                   (~or [(~or external-export:id (intern internal-export:string)) ...]
+                        (external external-package:id ...+)
+                        (append (~or (external external-package:id)
+                                     external-export:id
+                                     (intern internal-export:string))
+                                ...+))
+                   top-level-decls:shen-top-level-decl ...)
+      #:with external-package-specs #'(external-export ...)
+      #:with internal-provide-specs #'(internal-export ...)
+      #:with package-require-specs  #'(external-package ...)))
+
   (define-syntax-class shen-curry-out-export
     #:attributes (func-id renamed-id wrapper assoc)
     (pattern [(~seq func-id:id (~optional renamed-id:id #:defaults ([renamed-id #'func-id]))
