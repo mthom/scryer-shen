@@ -1,9 +1,7 @@
 (module reader syntax/module-reader
   #:language 'shen
   #:language-info '#(shen/lang/lang-info get-info #f)
-  #:wrapper1 (lambda (t)
-               (parameterize ([current-readtable shen-readtable])
-                 (t)))
+  #:wrapper1 wrapper1
   #:info (lambda (key defval default)
            (case key
              [(drracket:default-filters) '(["Shen Sources" "*.shen"])]
@@ -14,35 +12,33 @@
               (dynamic-require 'shen/tools/colorer 'shen-colorer)]
              [else (default key defval)]))
 
-  (require (only-in racket
-                    const
-                    [read r:read]
-                    [read-syntax r:read-syntax])
+  (require "macros.rkt"
+           racket
            racket/generator
            syntax/readerr
-           "shen-cons.rkt")
+           syntax/strip-context
+           syntax/stx)
 
   (provide shen-readtable)
 
+  (define (wrapper1 t is-syntax?)
+    (parameterize ([current-readtable shen-readtable])
+      (if is-syntax?
+          (strip-context (expand-shen-form (t)))
+          (syntax->datum (expand-shen-form (datum->syntax #f (t)))))))
+
   (define (shen-cons-fold list-items)
-    (foldr (lambda (item acc) (if (void? acc) item (datum->syntax #f (list #'shen-cons item acc))))
+    (foldr (lambda (item acc) (if (void? acc) item #`(cons #,item #,acc)))
            (void)
            (syntax->list list-items)))
 
   (define (read-list)
-    (define outer-scope (make-syntax-introducer #t))
     (case-lambda
       [(ch in)
-       (define inner-scope (make-syntax-introducer))
        (syntax->datum
-        (outer-scope
-         (inner-scope
-          (shen-cons-fold (inner-scope (outer-scope (read-list-items in (object-name in))))))))]
+        (shen-cons-fold (read-list-items in (object-name in))))]
       [(ch in src line col pos)
-       (define inner-scope (make-syntax-introducer))
-       (outer-scope
-        (inner-scope
-         (shen-cons-fold (inner-scope (outer-scope (read-list-items in src))))))]))
+       (shen-cons-fold (read-list-items in src))]))
 
   (define shen-readtable
     (make-readtable #f

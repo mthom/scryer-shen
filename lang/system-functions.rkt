@@ -6,11 +6,14 @@
          (only-in racket/exn
                   exn->string)
          (only-in "expander.rkt"
+                  package-list
                   shen-function-bindings
                   shen-variable-bindings)
          (only-in "failure.rkt"
                   fail
                   fail-if)
+         (only-in "macros.rkt"
+                  remove-shen-macro-expander!)
          "namespaces.rkt"
          (for-syntax syntax/parse))
 
@@ -113,3 +116,14 @@
   (if (and (symbol? x) (symbol? y))
       (string->symbol (string-append (symbol->string x) (symbol->string y)))
       (and x y)))
+
+(define (undefmacro name)
+  (if (symbol? name)
+      (remove-shen-macro-expander! name)
+      (error "undefmacro: argument must be a symbol naming a macro.")))
+
+(define (external pkg-name)
+  (package-list pkg-name 'external))
+
+(define (internal pkg-name)
+  (package-list pkg-name 'internal))

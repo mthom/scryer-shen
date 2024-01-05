@@ -3,22 +3,40 @@
 (require "macros.rkt"
          "namespaces.rkt"
          racket/stxparam
+         "systemf.rkt"
          syntax/parse/define
-         "syntax-utils.rkt"
-         (for-syntax racket/base
+         (for-syntax "packages.rkt"
+                     racket/base
                      racket/function
                      racket/match
                      racket/provide-transform
-                     racket/syntax
                      racket/stxparam
+                     racket/syntax
                      syntax/parse
-                     syntax/stx))
+                     syntax/stx
+                     "syntax-utils.rkt"))
 
-(define shen-variable-bindings
-  (make-hasheq))
+(define shen-function-bindings (make-hasheq))
+(define shen-variable-bindings (make-hasheq))
+(define shen-packages (make-hasheq))
 
-(define shen-function-bindings
-  (make-hasheq))
+(define (package-list pkg-name [type 'external])
+  (let ([package-ht (hash-ref! shen-packages pkg-name (thunk (make-hasheq)))])
+    (for/list ([(symbol symbol-type) (in-hash package-ht)]
+               #:when (eq? symbol-type type))
+      symbol)))
+
+(define (add-internal-symbols-to-package! pkg-name internal-symbols-list)
+  (let ([package-ht (hash-ref! shen-packages pkg-name (thunk (make-hasheq)))])
+    (map (lambda (symbol)
+           (hash-set! package-ht symbol 'internal))
+         internal-symbols-list)))
+
+(define (add-external-symbols-to-package! pkg-name external-symbols-list)
+  (let ([package-ht (hash-ref! shen-packages pkg-name (thunk (make-hasheq)))])
+    (map (lambda (symbol)
+           (hash-set! package-ht symbol 'external))
+         external-symbols-list)))
 
 (begin-for-syntax
   (define (generate-variadic-macro-or-wrapper renamed-id assoc wrapper-id
@@ -62,15 +80,6 @@
          (namespace-set-variable-value! 'fn non-spaced-fn #t kl-namespace)
          (namespace-set-variable-value! 'fn non-spaced-fn #t shen-namespace))]))
 
-(define-syntax define-shen-function-for-syntax
-  (syntax-parser
-    [(_ fn:id racket-fn)
-     #:with spaced-fn ((make-interned-syntax-introducer 'function) #'fn)
-     #:with non-spaced-fn (generate-temporary "non-spaced-wrapper")
-     #'(begin-for-syntax
-         (define non-spaced-fn racket-fn)
-         (define spaced-fn non-spaced-fn))]))
-
 (define-syntax shen-curry-out
   (make-provide-pre-transformer
    (lambda (stx modes)
@@ -99,6 +108,8 @@
                                    [curry-wrapper curry-wrapper]
                                    [renamed-id renamed-id])
                        (syntax-local-lift-expression
+                        #'(systemf 'renamed-id))
+                       (syntax-local-lift-expression
                         #'(hash-set! shen-function-bindings 'renamed-id curry-wrapper))
                        (if (syntax->datum assoc)
                            #'(rename-out [macro-or-wrapper-id renamed-id])
@@ -115,7 +126,10 @@
        [(_ f:shen-function-out-export ...)
         #:do [(stx-map
                syntax-local-lift-module-end-declaration
-               #'((define-shen-function f.renamed-id f.func-id) ...))]
+               #'((define-shen-function f.renamed-id f.func-id) ...))
+              (stx-map
+               syntax-local-lift-expression
+               #'((systemf 'f.renamed-id) ...))]
         (pre-expand-export
          #'(for-space function f.renamed-id ...)
          modes)]))))
@@ -123,38 +137,55 @@
 (define-syntax (shen-define stx)
   (syntax-parse stx
     [(shen-define define-form:shen-define)
-     #:when (syntax-property stx 'expanded)
-     #'(begin
-         (define-shen-function define-form.name define-form.wrapper)
-         (define-shen-function-for-syntax define-form.name define-form.wrapper))]
-    [(shen-define define-form:shen-define)
-     (expand-shen-form #'(shen-define . define-form))]
+     #'(define-shen-function define-form.name define-form.wrapper)]
     [shen-define:id #''shen-define]))
 
 (define-syntax (shen-defmacro stx)
   (syntax-parse stx
     [(shen-defmacro defmacro:shen-defmacro)
-     #:when (syntax-property stx 'expanded)
-     #'(begin-for-syntax
-         (add-shen-macro-expander! defmacro.expander))]
-    [(shen-defmacro defmacro:shen-defmacro)
-     (expand-shen-form #'(shen-defmacro . defmacro))]
+     #'(add-shen-macro-expander! defmacro.name defmacro.expander)]
     [defmacro:id #''defmacro]))
+
+(define-syntax (shen-package stx)
+  (syntax-parse stx
+    [(shen-package package:shen-package)
+     (let-values ([(top-level-forms external-symbols internal-symbols)
+                   (unpackage-shen-package
+                    #'package.name
+                    #'package.export-list
+                    #'(package.top-level-decls ...))])
+       (with-syntax ([external-symbols (hash-keys external-symbols)]
+                     [internal-symbols (hash-keys internal-symbols)])
+         (syntax-local-lift-expression
+          #'(add-external-symbols-to-package!
+             'package.name
+             'external-symbols))
+         (syntax-local-lift-expression
+          #'(add-internal-symbols-to-package!
+             'package.name
+             'internal-symbols))
+         #'(begin package.top-level-decls ...)))]))
 
 (define-syntax (kl-defun stx)
   (syntax-parse stx
     [(kl-defun defun:kl-defun)
-     #:when (syntax-property stx 'expanded)
      #'(define-shen-function defun.name defun.wrapper)]
-    [(kl-defun defun:kl-defun)
-     (expand-shen-form #'(kl-defun . defun))]
     [defun:id #''defun]))
 
-(define-syntax-parse-rule (shen-let b:shen-binding ...+ body:expr)
-  (let* ([b.id b.expr] ...) body))
+(define-syntax shen-lambda
+  (syntax-parser
+    [(shen-lambda lambda-form:shen-lambda-form)
+     #'(lambda (lambda-form.var ...)
+         lambda-form.body-expr
+         ...)]))
 
-(define-syntax-parse-rule (shen-lambda id:shen-var-id ... body:expr)
-  (curry (lambda (id ...) body)))
+(define-syntax shen-let
+  (syntax-parser
+    [(shen-let let-form:shen-let-form)
+     #'(let* ([let-form.binding-id let-form.binding-expr]
+              ...)
+         let-form.body-expr
+         ...)]))
 
 (define-syntax (shen-true stx)
   (syntax-case stx ()
@@ -164,14 +195,16 @@
   (syntax-case stx ()
     [_:id #'#f]))
 
-(provide (protect-out shen-curry-out
+(provide package-list
+         (protect-out kl-defun
+                      shen-curry-out
                       shen-function-out
                       shen-function-bindings
-                      shen-variable-bindings
-                      kl-defun)
+                      shen-variable-bindings)
          (rename-out [shen-true true]
                      [shen-false false]
                      [shen-define define]
                      [shen-let let]
                      [shen-lambda /.]
-                     [shen-defmacro defmacro]))
+                     [shen-defmacro defmacro]
+                     [shen-package package]))

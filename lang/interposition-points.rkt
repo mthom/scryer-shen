@@ -1,22 +1,25 @@
 #lang racket
 
-(require "syntax-utils.rkt"
-         (only-in "system-functions.rkt"
+(require (only-in "system-functions.rkt"
+                  [eval shen:eval]
                   function)
-         (for-syntax syntax/parse))
+         "macros.rkt"
+         (for-syntax syntax/parse
+                     "syntax-utils.rkt"))
 
-(provide app
-         top
-         datum)
+(provide app top top-interaction)
 
-(define-syntax (datum stx)
+(define-syntax (app stx)
   (syntax-parse stx
-    [(datum . x)
-     #:when (syntax-property #'x 'expanded)
-     (syntax/loc stx (#%datum . x))]
-    [(datum . x)
-     #:with expanded-form (expand-shen-form #'x)
-     (syntax/loc stx (#%datum . expanded-form))]))
+    [(app)
+     (syntax/loc stx empty)]
+    [(app . (proc-var:shen-var-id . args))
+     (syntax/loc stx (#%app . ((app function proc-var) . args)))]
+    [(app . (proc:id . args))
+     #:with fs-proc ((make-interned-syntax-introducer 'function) #'proc)
+     (syntax/loc stx (#%app . (fs-proc . args)))]
+    [(app . form)
+     (syntax/loc stx (#%app . form))]))
 
 (define-syntax (top stx)
   (syntax-parse stx
@@ -27,18 +30,8 @@
     [(top . id:id)
      (syntax/loc stx (quote id))]))
 
-(define-syntax (app stx)
+(define-syntax (top-interaction stx)
   (syntax-parse stx
-    [(app)
-     (syntax/loc stx empty)]
-    [(app . (proc-var:shen-var-id . args))
-     (syntax/loc stx (#%app . ((app function proc-var) . args)))]
-    [(app . form)
-     #:when (not (syntax-property #'form 'expanded))
-     #:with expanded-form (expand-shen-form #'form)
-     (quasisyntax/loc stx (app . expanded-form))]
-    [(app . (proc:id . args))
-     #:with fs-proc ((make-interned-syntax-introducer 'function) #'proc)
-     (syntax/loc stx (#%app . (fs-proc . args)))]
-    [(app . form)
-     (syntax/loc stx (#%app . form))]))
+    [(top-interaction . form)
+     #:with expanded-form #`(shen:eval (syntax->datum (expand-shen-form #'#,#'form)))
+     (syntax/loc stx (#%top-interaction . expanded-form))]))

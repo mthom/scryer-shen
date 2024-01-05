@@ -8,7 +8,8 @@
                   shen-curry-out
                   shen-function-out)
          "failure.rkt"
-         "system-functions.rkt")
+         "system-functions.rkt"
+         "systemf.rkt")
 
 ;; system functions manifest
 (provide (shen-curry-out [+ #:arity 2 #:polyadic #:right]
@@ -26,7 +27,7 @@
                          [vector-set! address-> #:arity 3]
                          [cons #:arity 2]
                          [cons adjoin #:arity 2]
-                         [append #:arity 2]
+                         [append #:arity 2 #:polyadic #:right]
                          [map #:arity 2]
                          [cn #:arity 2]
                          [concat #:arity 2]
@@ -44,10 +45,14 @@
                             cons?
                             empty?
                             error-to-string
+                            external
                             eval
                             eval-kl
                             function
+                            internal
                             symbol?
+                            systemf
+                            undefmacro
                             value)
          (all-from-out "failure.rkt")
          destroy

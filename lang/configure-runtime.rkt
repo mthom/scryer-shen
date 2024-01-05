@@ -2,7 +2,8 @@
 
 (provide configure)
 
-(require (only-in "reader.rkt" shen-readtable)
+(require (only-in "macros.rkt" expand-shen-form)
+         (only-in "reader.rkt" shen-readtable)
          "printer.rkt")
 
 (define (configure data)

@@ -2,8 +2,7 @@
 
 (require racket/base
          racket/generator
-         racket/match
-         "shen-cons.rkt")
+         racket/match)
 
 (provide shen-printer)
 
@@ -17,7 +16,7 @@
                        (unless (empty? pair)
                          (write-string " |" port)
                          (yield pair))])))]
-        [space (sequence-append (in-value "") (in-cycle '(#\space)))])        
+        [space (sequence-append (in-value "") (in-cycle '(#\space)))])
     (fprintf port "~a" space)
     (shen-printer arg port)))
 
