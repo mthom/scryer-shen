@@ -44,6 +44,12 @@
 
 (define (add-shen-macro-expander! name new-macro-expander)
   (define new-node (macro-list-node new-macro-expander (void) (void)))
+
+  ;; if a macro is already defined under 'name', remove it from the
+  ;; macro-list.
+  (when (hash-ref macro-table name (thunk #f))
+    (remove-shen-macro-expander! name))
+
   (push-macro-list! new-node)
   (hash-set! macro-table name new-node))
 
@@ -118,14 +124,23 @@
       (syntax/loc stx
         (/. lambda-form.var ... expanded-body-expr ...)))]
     [((~datum package) package-form:shen-package)
-     (let-values ([(top-level-forms external-symbols internal-symbols)
-                   (unpackage-shen-package
-                    #'package-form.name
-                    #'package-form.export-list
-                    #'(package-form.top-level-decls ...))])
-       (with-syntax ([(expanded-form ...) (stx-map expand-shen-form top-level-forms)])
+     #:when (and (eq? (syntax->datum #'package-form.name) 'null)
+                 (eq? (syntax->datum #'package-form.export-list) '()))
+     #:with (expanded-form ...) (stx-map expand-shen-form #'(package-form.top-level-decls ...))
+     (syntax/loc stx
+       (package null () expanded-form ...))]
+    [((~datum package) package-form:shen-package)
+     (let*-values ([(export-list) (eval-export-list (expand-shen-form #'package-form.export-list))]
+                   [(top-level-forms external-symbols internal-symbols)
+                    (unpackage-shen-package
+                     #'package-form.name
+                     export-list
+                     #'(package-form.top-level-decls ...))])
+       (with-syntax ([(expanded-form ...) (stx-map expand-shen-form top-level-forms)]
+                     [export-list (datum->syntax #'package-form.export-list export-list)])
          (syntax/loc stx
-           (package package-form.name package-form.export-list
+           (package package-form.name
+                    export-list
                     expanded-form ...))))]
     [body:expr
      #:when (stx-pair? #'body)

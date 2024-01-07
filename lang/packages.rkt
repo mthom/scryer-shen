@@ -7,17 +7,18 @@
          syntax/stx
          "systemf.rkt")
 
-(provide unpackage-shen-package)
+(provide eval-export-list
+         unpackage-shen-package)
 
 (define (eval-export-list export-list)
-  (define quoted-export-list (quote-pattern export-list))
-  (if (stx-null? quoted-export-list)
-      '()
-      (eval-syntax quoted-export-list shen-namespace)))
+  (parameterize ([current-namespace shen-namespace])
+    (define quoted-export-list (expand (quote-pattern export-list)))
+    (if (stx-null? quoted-export-list)
+        '()
+        (eval-syntax quoted-export-list))))
 
 (define (unpackage-shen-package pkg-name export-list top-level-decls)
-  (let ([export-list (eval-export-list export-list)]
-        [external-symbols (make-hasheq)]
+  (let ([external-symbols (make-hasheq)]
         [internal-symbols (make-hasheq)])
     (values (map (curry fqn pkg-name export-list external-symbols internal-symbols)
                  (syntax->list top-level-decls))

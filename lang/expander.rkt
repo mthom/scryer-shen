@@ -149,10 +149,14 @@
 (define-syntax (shen-package stx)
   (syntax-parse stx
     [(shen-package package:shen-package)
+     #:when (and (eq? (syntax->datum #'package.name) 'null)
+                 (eq? (syntax->datum #'package.export-list) '()))
+     #'(begin package.top-level-decls ...)]
+    [(shen-package package:shen-package)
      (let-values ([(top-level-forms external-symbols internal-symbols)
                    (unpackage-shen-package
                     #'package.name
-                    #'package.export-list
+                    (syntax->datum #'package.export-list)
                     #'(package.top-level-decls ...))])
        (with-syntax ([external-symbols (hash-keys external-symbols)]
                      [internal-symbols (hash-keys internal-symbols)])

@@ -2,7 +2,8 @@
 
 (require (only-in racket
                   [map r:map]
-                  [eval r:eval])
+                  [eval r:eval]
+                  [load r:load])
          (only-in racket/exn
                   exn->string)
          (only-in "expander.rkt"
@@ -13,9 +14,13 @@
                   fail
                   fail-if)
          (only-in "macros.rkt"
+                  expand-shen-form
                   remove-shen-macro-expander!)
          "namespaces.rkt"
-         (for-syntax syntax/parse))
+         (only-in "reader.rkt"
+                  shen-readtable)
+         (for-syntax syntax/parse)
+         syntax/strip-context)
 
 (provide (all-defined-out))
 
@@ -127,3 +132,13 @@
 
 (define (internal pkg-name)
   (package-list pkg-name 'internal))
+
+(define (load filename)
+  (define in (open-input-file filename))
+  (define expanded-forms
+    (parameterize ([current-readtable shen-readtable])
+      (for/list ([stx (in-port (curry read-syntax (object-name in)) in)])
+        (expand (strip-context (expand-shen-form stx))))))
+  (close-input-port in)
+  (eval-syntax #`(begin #,@expanded-forms))
+  'loaded)

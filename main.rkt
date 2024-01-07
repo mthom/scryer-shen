@@ -1,6 +1,7 @@
 #lang racket
 
 (compile-allow-set!-undefined #t)
+(compile-enforce-module-constants #f)
 
 (require "lang/expander.rkt"
          "lang/interposition-points.rkt"

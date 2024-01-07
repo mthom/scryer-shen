@@ -1,6 +1,7 @@
 #lang racket
 
 (require (except-in racket
+                    load
                     map
                     eval
                     set)
@@ -50,6 +51,7 @@
                             eval-kl
                             function
                             internal
+                            load
                             symbol?
                             systemf
                             undefmacro
