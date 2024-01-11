@@ -3,10 +3,10 @@
 (require "macros.rkt"
          "namespaces.rkt"
          racket/stxparam
+         "packages.rkt"
          "systemf.rkt"
          syntax/parse/define
-         (for-syntax "packages.rkt"
-                     racket/base
+         (for-syntax racket/base
                      racket/function
                      racket/match
                      racket/provide-transform
@@ -152,23 +152,17 @@
      #:when (and (eq? (syntax->datum #'package.name) 'null)
                  (eq? (syntax->datum #'package.export-list) '()))
      #'(begin package.top-level-decls ...)]
-    [(shen-package package:shen-package)
-     (let-values ([(top-level-forms external-symbols internal-symbols)
-                   (unpackage-shen-package
-                    #'package.name
-                    (syntax->datum #'package.export-list)
-                    #'(package.top-level-decls ...))])
-       (with-syntax ([external-symbols (hash-keys external-symbols)]
-                     [internal-symbols (hash-keys internal-symbols)])
-         (syntax-local-lift-expression
-          #'(add-external-symbols-to-package!
-             'package.name
-             'external-symbols))
-         (syntax-local-lift-expression
-          #'(add-internal-symbols-to-package!
-             'package.name
-             'internal-symbols))
-         #'(begin package.top-level-decls ...)))]))
+    [(shen-package package:shen-internal-package)
+     (syntax-local-lift-expression
+      #'(add-external-symbols-to-package!
+          'package.name
+          'package.external-symbols))
+     (syntax-local-lift-expression
+      #'(add-internal-symbols-to-package!
+          'package.name
+          'package.internal-symbols))
+     #'(begin
+         package.top-level-decls ...)]))
 
 (define-syntax (kl-defun stx)
   (syntax-parse stx

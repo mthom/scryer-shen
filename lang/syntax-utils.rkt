@@ -23,6 +23,7 @@
          shen-function-out-export
          shen-define
          shen-defmacro
+         shen-internal-package
          shen-package
          shen-lambda-form
          shen-let-form)
@@ -172,6 +173,18 @@
                 (top-level-decls 1))
   (pattern (~seq name:id
                  export-list:expr
+                 top-level-decls:shen-top-level-decl ...)))
+
+(define-splicing-syntax-class shen-internal-package
+  #:attributes (export-list
+                external-symbols
+                internal-symbols
+                name
+                (top-level-decls 1))
+  (pattern (~seq name:id
+                 export-list:expr
+                 external-symbols:expr
+                 internal-symbols:expr
                  top-level-decls:shen-top-level-decl ...)))
 
 (define-syntax-class shen-curry-out-export

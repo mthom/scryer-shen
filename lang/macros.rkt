@@ -4,6 +4,7 @@
                   curry)
          syntax/parse
          syntax/stx
+         "namespaces.rkt"
          "packages.rkt"
          "syntax-utils.rkt")
 
@@ -11,7 +12,7 @@
          remove-shen-macro-expander!
          expand-shen-form)
 
-(struct original [form] #:transparent)
+(struct original [form])
 
 (struct macro-list-node [expander [prev #:mutable] [next #:mutable]]
   #:property prop:procedure (lambda (self form)
@@ -130,17 +131,22 @@
      (syntax/loc stx
        (package null () expanded-form ...))]
     [((~datum package) package-form:shen-package)
-     (let*-values ([(export-list) (eval-export-list (expand-shen-form #'package-form.export-list))]
+     (let*-values ([(export-list)
+                    (eval-export-list (expand-shen-form #'package-form.export-list))]
                    [(top-level-forms external-symbols internal-symbols)
                     (unpackage-shen-package
                      #'package-form.name
                      export-list
                      #'(package-form.top-level-decls ...))])
        (with-syntax ([(expanded-form ...) (stx-map expand-shen-form top-level-forms)]
+                     [external-symbols (hash-keys external-symbols)]
+                     [internal-symbols (hash-keys internal-symbols)]
                      [export-list (datum->syntax #'package-form.export-list export-list)])
          (syntax/loc stx
            (package package-form.name
                     export-list
+                    external-symbols
+                    internal-symbols
                     expanded-form ...))))]
     [body:expr
      #:when (stx-pair? #'body)

@@ -13,9 +13,7 @@
          (only-in "failure.rkt"
                   fail
                   fail-if)
-         (only-in "macros.rkt"
-                  expand-shen-form
-                  remove-shen-macro-expander!)
+         "macros.rkt"
          "namespaces.rkt"
          (only-in "reader.rkt"
                   shen-readtable)
