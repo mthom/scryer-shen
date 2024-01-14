@@ -52,6 +52,7 @@
                             function
                             internal
                             load
+                            output
                             symbol?
                             systemf
                             undefmacro

@@ -43,7 +43,8 @@
   (define shen-readtable
     (make-readtable #f
                     #\[ 'terminating-macro (read-list)
-                    #\| 'terminating-macro (const #\|)))
+                    #\| 'terminating-macro (const #\|)
+                    #\; 'terminating-macro (const #\;)))
 
   (define (consume-spaces in)
     (define ch (peek-char in))

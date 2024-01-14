@@ -1,9 +1,11 @@
 #lang racket
 
-(require "macros.rkt"
+(require "bindings.rkt"
+         "macros.rkt"
          "namespaces.rkt"
          racket/stxparam
          "packages.rkt"
+         "prolog.rkt"
          "systemf.rkt"
          syntax/parse/define
          (for-syntax racket/base
@@ -15,28 +17,6 @@
                      syntax/parse
                      syntax/stx
                      "syntax-utils.rkt"))
-
-(define shen-function-bindings (make-hasheq))
-(define shen-variable-bindings (make-hasheq))
-(define shen-packages (make-hasheq))
-
-(define (package-list pkg-name [type 'external])
-  (let ([package-ht (hash-ref! shen-packages pkg-name (thunk (make-hasheq)))])
-    (for/list ([(symbol symbol-type) (in-hash package-ht)]
-               #:when (eq? symbol-type type))
-      symbol)))
-
-(define (add-internal-symbols-to-package! pkg-name internal-symbols-list)
-  (let ([package-ht (hash-ref! shen-packages pkg-name (thunk (make-hasheq)))])
-    (map (lambda (symbol)
-           (hash-set! package-ht symbol 'internal))
-         internal-symbols-list)))
-
-(define (add-external-symbols-to-package! pkg-name external-symbols-list)
-  (let ([package-ht (hash-ref! shen-packages pkg-name (thunk (make-hasheq)))])
-    (map (lambda (symbol)
-           (hash-set! package-ht symbol 'external))
-         external-symbols-list)))
 
 (begin-for-syntax
   (define (generate-variadic-macro-or-wrapper renamed-id assoc wrapper-id
@@ -134,20 +114,20 @@
          #'(for-space function f.renamed-id ...)
          modes)]))))
 
-(define-syntax (shen-define stx)
-  (syntax-parse stx
+(define-syntax shen-define
+  (syntax-parser
     [(shen-define define-form:shen-define)
      #'(define-shen-function define-form.name define-form.wrapper)]
     [shen-define:id #''shen-define]))
 
-(define-syntax (shen-defmacro stx)
-  (syntax-parse stx
+(define-syntax shen-defmacro
+  (syntax-parser
     [(shen-defmacro defmacro:shen-defmacro)
      #'(add-shen-macro-expander! defmacro.name defmacro.expander)]
     [defmacro:id #''defmacro]))
 
-(define-syntax (shen-package stx)
-  (syntax-parse stx
+(define-syntax shen-package
+  (syntax-parser
     [(shen-package package:shen-package)
      #:when (and (eq? (syntax->datum #'package.name) 'null)
                  (eq? (syntax->datum #'package.export-list) '()))
@@ -163,6 +143,22 @@
           'package.internal-symbols))
      #'(begin
          package.top-level-decls ...)]))
+
+(define-syntax shen-defprolog
+  (syntax-parser
+    [(shen-defprolog rule-name:id rule:shen-prolog-rule ...+)
+     #:with iso-prolog-code (datum->syntax #'rule-name
+                                           (expand-shen-defprolog #'rule-name #'(rule ...))
+                                           #'rule-name)
+     #'(add-prolog-predicate! iso-prolog-code)]))
+
+(define-syntax (shen-prolog? stx)
+  (syntax-parse stx
+    [(shen-prolog? goal:prolog-body-pattern ...+)
+     #:with iso-prolog-query (datum->syntax stx
+                                            (expand-shen-prolog-query #'(goal ...))
+                                            stx)
+     #'(run-prolog-query! iso-prolog-query)]))
 
 (define-syntax (kl-defun stx)
   (syntax-parse stx
@@ -193,16 +189,15 @@
   (syntax-case stx ()
     [_:id #'#f]))
 
-(provide package-list
-         (protect-out kl-defun
+(provide (protect-out kl-defun
                       shen-curry-out
-                      shen-function-out
-                      shen-function-bindings
-                      shen-variable-bindings)
+                      shen-function-out)
          (rename-out [shen-true true]
                      [shen-false false]
                      [shen-define define]
                      [shen-let let]
                      [shen-lambda /.]
                      [shen-defmacro defmacro]
-                     [shen-package package]))
+                     [shen-defprolog defprolog]
+                     [shen-package package]
+                     [shen-prolog? prolog?]))

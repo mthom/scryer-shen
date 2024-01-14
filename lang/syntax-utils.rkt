@@ -16,6 +16,7 @@
 (provide function-clause-definition
          kl-defun
          macro-clause-definition
+         prolog-body-pattern
          quote-pattern
          shen-binding
          shen-var-id
@@ -26,7 +27,8 @@
          shen-internal-package
          shen-package
          shen-lambda-form
-         shen-let-form)
+         shen-let-form
+         shen-prolog-rule)
 
 (define (capitalized-symbol? symbol)
   (and (symbol? symbol)
@@ -73,6 +75,13 @@
   #:datum-literals (->)
   (pattern (~not ->)
            #:with pat (quote-pattern this-syntax)))
+
+(define-syntax-class prolog-head-pattern
+  #:datum-literals (<--)
+  (pattern (~and (~not (~or <-- (~datum #\;))))))
+
+(define-syntax-class prolog-body-pattern
+  (pattern (~and (~not (~datum #\;)))))
 
 (define-syntax-class shen-op-assoc
   (pattern (~or #:right #:left)))
@@ -209,3 +218,12 @@
   (pattern [(~seq func-id:id renamed-id:id)])
   (pattern func-id:id
            #:with renamed-id #'func-id))
+
+(define-splicing-syntax-class shen-prolog-rule
+  #:attributes ((head-form 1)
+                (body-form 1))
+  #:datum-literals (<--)
+  (pattern (~seq head-form:prolog-head-pattern ...
+                 <--
+                 body-form:prolog-body-pattern ...
+                 (~datum #\;))))

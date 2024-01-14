@@ -1,0 +1,68 @@
+#lang racket
+
+(require data/gvector
+         racket/runtime-path
+         racket/system)
+
+(provide add-multiplexed-input-port-pipe!
+         add-multiplexed-output-port-pipe!
+         scryer-prolog-err
+         scryer-prolog-in
+         scryer-prolog-out)
+
+(define-runtime-path scryer-prolog-path "dist/bin/scryer-prolog")
+
+(define-values (scryer-prolog-process in out err)
+  (subprocess #f #f #f 'new scryer-prolog-path "-f" "scryer-prolog-server.pl"))
+
+(struct multiplexed-input-port [name wrapped-in child-outs]
+  #:property prop:input-port (struct-field-index wrapped-in))
+
+(struct multiplexed-output-port [name wrapped-out child-outs]
+  #:property prop:output-port (struct-field-index wrapped-out))
+
+(define (make-multiplexed-input-port name in)
+  (define child-outs (make-gvector))
+  (define wrapped-in (make-input-port
+                      name
+                      (lambda (bstr)
+                        (define result (read-bytes! bstr in))
+                        (for ([pipe (in-gvector child-outs)])
+                          (write-bytes bstr pipe))
+                        result)
+                      #f
+                      (thunk (close-input-port in))))
+  (multiplexed-input-port name wrapped-in child-outs))
+
+(define (make-multiplexed-output-port name out)
+  (define child-outs (make-gvector))
+  (define wrapped-out (make-output-port
+                       name
+                       always-evt
+                       (lambda (bstr start-pos end-pos can-block? blocks?)
+                         (define result (write-bytes
+                                         bstr
+                                         out
+                                         start-pos
+                                         end-pos))
+                         (for ([pipe (in-gvector child-outs)])
+                           (write-bytes bstr pipe start-pos end-pos))
+                         result)
+                       (thunk (close-output-port out))))
+  (multiplexed-output-port name wrapped-out child-outs))
+
+(define (add-multiplexed-input-port-pipe! in pipe)
+  (gvector-add! (multiplexed-input-port-child-outs in) pipe))
+
+(define (add-multiplexed-output-port-pipe! out pipe)
+  (gvector-add! (multiplexed-output-port-child-outs out) pipe))
+
+(define scryer-prolog-in  (make-multiplexed-input-port 'scryer-prolog-out in))
+(define scryer-prolog-err (make-multiplexed-input-port 'scryer-prolog-err err))
+(define scryer-prolog-out (make-multiplexed-output-port 'scryer-prolog-in out))
+
+(define sp-ports-executor (make-will-executor))
+
+(will-register sp-ports-executor scryer-prolog-in close-input-port)
+(will-register sp-ports-executor scryer-prolog-out close-output-port)
+(will-register sp-ports-executor scryer-prolog-err close-input-port)

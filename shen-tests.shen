@@ -29,8 +29,6 @@
 (define identity
   X -> X)
 
-(identity 1)
-
 (defmacro max-macro
   [max X Y Z | W] -> [max X [max Y Z | W]])
 
@@ -50,7 +48,14 @@
     X -> (- X) where (< X 0)
     X -> X))
 
-;; FIXME: this does not work. the namespace-requires are not done in time.
+(define foo
+  X -> (prolog? (return (+ (receive X) (receive X)))))
+
+(define foo-2
+  X -> (prolog? (f (receive X) (h (g (receive X) X) (g Y)))))
+
+#|
+;;FIXME: this does not work. the namespace-requires are not done in time.
 (package foo (append (external math) [log])
   (define my-head
     [X | Y] -> X
@@ -58,3 +63,4 @@
 
   (defmacro log-macro
     [log N] -> [+ N 1]))
+|#

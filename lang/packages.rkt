@@ -7,8 +7,31 @@
          syntax/stx
          "systemf.rkt")
 
-(provide eval-export-list
+(provide add-internal-symbols-to-package!
+         add-external-symbols-to-package!
+         eval-export-list
+         package-list
          unpackage-shen-package)
+
+(define shen-packages (make-hasheq))
+
+(define (package-list pkg-name [type 'external])
+  (let ([package-ht (hash-ref! shen-packages pkg-name (thunk (make-hasheq)))])
+    (for/list ([(symbol symbol-type) (in-hash package-ht)]
+               #:when (eq? symbol-type type))
+      symbol)))
+
+(define (add-internal-symbols-to-package! pkg-name internal-symbols-list)
+  (let ([package-ht (hash-ref! shen-packages pkg-name (thunk (make-hasheq)))])
+    (map (lambda (symbol)
+           (hash-set! package-ht symbol 'internal))
+         internal-symbols-list)))
+
+(define (add-external-symbols-to-package! pkg-name external-symbols-list)
+  (let ([package-ht (hash-ref! shen-packages pkg-name (thunk (make-hasheq)))])
+    (map (lambda (symbol)
+           (hash-set! package-ht symbol 'external))
+         external-symbols-list)))
 
 (define (eval-export-list export-list)
   (parameterize ([current-namespace shen-namespace])
