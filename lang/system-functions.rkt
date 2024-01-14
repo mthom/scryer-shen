@@ -1,15 +1,14 @@
 #lang racket
 
-(require (only-in racket
+(require "bindings.rkt"
+         (only-in racket
                   [map r:map]
                   [eval r:eval]
                   [load r:load])
          (only-in racket/exn
                   exn->string)
-         (only-in "expander.rkt"
-                  package-list
-                  shen-function-bindings
-                  shen-variable-bindings)
+         (only-in "packages.rkt"
+                  package-list)
          (only-in "failure.rkt"
                   fail
                   fail-if)
@@ -107,11 +106,11 @@
 (define (eval-kl expr)
   (r:eval expr
           (if (and (cons? expr) (eq? 'defun (first expr)))
-              (current-namespace)
+              shen-namespace
               kl-namespace)))
 
 (define (eval expr)
-  (r:eval expr))
+  (r:eval expr shen-namespace))
 
 (define error-to-string exn->string)
 
@@ -140,3 +139,6 @@
   (close-input-port in)
   (eval-syntax #`(begin #,@expanded-forms))
   'loaded)
+
+(define (output fmt-string . args)
+  (apply printf fmt-string args))

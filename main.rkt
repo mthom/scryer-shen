@@ -23,7 +23,7 @@
 (namespace-require "lang/system-function-exports.rkt" shen-namespace)
 (namespace-require '(for-space function "lang/system-function-exports.rkt") shen-namespace)
 (namespace-require '(rename "lang/expander.rkt" defun kl-defun) shen-namespace)
-(namespace-require '(only "lang/expander.rkt" /. define defmacro false let package true) shen-namespace)
+(namespace-require '(only "lang/expander.rkt" /. define defmacro defprolog false let package prolog? true) shen-namespace)
 
 (define-syntax-rule (shen-mb body ...)
   (#%module-begin
@@ -43,6 +43,8 @@
          /.
          define
          defmacro
+         defprolog
          package
+         prolog?
          (rename-out [kl-defun defun]
                      [shen-mb #%module-begin]))

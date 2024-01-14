@@ -23,6 +23,8 @@
 (define/contract (shen-printer datum port)
   (any/c output-port? . -> . any)
   (match datum
+    [(? empty?)
+     (write-string "[]" port)]
     [(? cons?)
      (write-char #\[ port)
      ;; don't print a space before the first element but do print one
@@ -37,5 +39,7 @@
      (write-char #\" port)]
     [(? boolean?)
      (write-string (if datum "true" "false") port)]
+    [(? void?)
+     (write-string "[]" port)]
     [_
      (write datum port)]))
