@@ -32,7 +32,6 @@
   (send frame show #t)
 
   (thread (lambda ()
-            ;; (send scryer-prolog-text insert "?- ")
             (let loop ()
               (define line (read-line sp-connector-in))
               (unless (eof-object? line)

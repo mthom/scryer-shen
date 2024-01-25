@@ -1,6 +1,8 @@
 #lang racket
 
 (require "namespaces.rkt"
+         "printer.rkt"
+         (only-in "reader.rkt" shen-readtable)
          "scryer-prolog-interface.rkt"
          (prefix-in shen: "system-functions.rkt")
          (for-syntax
@@ -17,31 +19,34 @@
                      expand-shen-prolog-query))
 
 (define (add-prolog-predicate! iso-prolog-code)
-  (fprintf scryer-prolog-out "[user].\n~a\nend_of_file.\n" iso-prolog-code)
-  (flush-output scryer-prolog-out))
+  (fprintf scryer-prolog-out "[user].~n~a~nend_of_file.~n" iso-prolog-code))
 
 (define (run-prolog-query! iso-prolog-query)
-  (fprintf scryer-prolog-out "shen_prolog_eval((~a)).\n" iso-prolog-query)
-  (flush-output scryer-prolog-out)
-
-  (let loop ()
-    (match-define (list fn-call continue?)
-      (parameterize ([current-namespace shen-namespace])
-        (read-syntax #f scryer-prolog-in)))
-
-    (define result (shen:eval fn-call))
-
-    (if continue?
-        (begin
-          (fprintf scryer-prolog-out "~a.\n" result)
-          (flush-output scryer-prolog-out)
-          (loop))
-        result)))
+  (fprintf scryer-prolog-out "shen_prolog_eval((~a)).~n" iso-prolog-query)
+  (begin0
+      (let loop ()
+        (match (parameterize ([current-readtable shen-readtable])
+                 (shen:eval (read scryer-prolog-in)))
+          [(cons fn-call (cons continue? empty))
+           (read-char scryer-prolog-in) ;; read trailing newline
+           (define result (shen:eval fn-call))
+           (if continue?
+               (begin
+                 (shen-printer result scryer-prolog-out)
+                 (fprintf scryer-prolog-out ".~n")
+                 (loop))
+               result)]
+          [_ #f]))
+    ;; read in solutions line, which scryer-shen does not use
+    (read-line scryer-prolog-in)))
 
 (begin-for-syntax
   (define (underscore-hyphen atom string-port)
     (let* ([underlying-str (symbol->string (syntax->datum atom))])
-      (write-string (string-replace underlying-str "-" "_") string-port)))
+      (write-string (if (equal? underlying-str "-")
+                        "-"
+                        (string-replace underlying-str "-" "_"))
+                    string-port)))
 
   (define (prolog-syntax-writers query?)
     (define string-port (open-output-string))
@@ -56,7 +61,7 @@
                               (let ([hd (shift-args #'hd top-level-arg?)]
                                     [tl (shift-args #'tl top-level-arg?)])
                                 (quasisyntax/loc stx (cons #,hd #,tl)))]
-                             [((~and hd:id (~not hd:shen-var-id)) . tl)
+                             [(hd . tl)
                               #:when top-level-arg?
                               (let ([hd (shift-args #'hd #f)]
                                     [tl (stx-map (lambda (stx) (shift-args stx #f)) #'tl)]
@@ -70,29 +75,7 @@
                                 (write-string ")), " string-port)
 
                                 (datum->syntax stx result-binding stx))]
-                             [((~or hd:shen-var-id hd:expr) . tl)
-                              #:when top-level-arg?
-                              (let ([hd (shift-args #'hd #f)]
-                                    [tl (stx-map (lambda (stx) (shift-args stx #f)) #'tl)]
-                                    [result-binding (gensym "G")])
-                                (write-string "shift(bind(apply(" string-port)
-                                (loop hd)
-                                (map (lambda (stx)
-                                       (write-string ", " string-port)
-                                       (loop stx))
-                                     tl)
-                                (write-string "), " string-port)
-                                (write result-binding string-port)
-                                (write-string ")), " string-port)
-
-                                (datum->syntax stx result-binding stx))]
-                             [(hd . tl)
-                              #:when (not top-level-arg?)
-                              (let ([hd (shift-args #'hd #f)]
-                                    [tl (shift-args #'tl #f)])
-                                (datum->syntax stx (cons hd tl) stx))]
-                             [form
-                              #'form]))]
+                             [form #'form]))]
              [loop (lambda (rule [top-level? #f])
                      (syntax-parse rule
                        [((~datum cons) hd tl)
@@ -100,9 +83,8 @@
                               [tl (shift-args #'tl)])
                           (write-string "[" string-port)
                           (loop hd)
-                          (unless (eq? (syntax->datum tl) empty)
-                            (write-string " | " string-port)
-                            (loop tl))
+                          (write-string " | " string-port)
+                          (loop tl)
                           (write-string "]" string-port))]
                        [((~datum is!) x t)
                         #:when top-level?

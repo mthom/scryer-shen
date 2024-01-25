@@ -20,7 +20,7 @@
 
 (define (shen-repl)
   (define prompt-num 0)
-  (open-prolog-debug-gui)
+  ;; (open-prolog-debug-gui)
   (parameterize ([current-namespace shen-namespace]
                  [current-readtable shen-readtable])
     (let loop ()

@@ -39,5 +39,7 @@
      (write-char #\" port)]
     [(? boolean?)
      (write-string (if datum "true" "false") port)]
+    [(? void?)
+     (write-string "[]" port)]
     [_
      (write datum port)]))

@@ -10,22 +10,22 @@
          scryer-prolog-in
          scryer-prolog-out)
 
-(define-runtime-path scryer-prolog-path "dist/bin/scryer-prolog")
+(define-runtime-path scryer-prolog-path   "../dist/bin/scryer-prolog")
+(define-runtime-path scryer-prolog-server "../scryer-prolog-server.pl")
 
 (define-values (scryer-prolog-process in out err)
-  (subprocess #f #f #f 'new scryer-prolog-path "-f" "scryer-prolog-server.pl"))
+  (subprocess #f #f #f scryer-prolog-path "-f" scryer-prolog-server))
 
 (struct multiplexed-input-port [name wrapped-in child-outs]
   #:property prop:input-port (struct-field-index wrapped-in))
 
-(struct multiplexed-output-port [name wrapped-out child-outs]
-  #:property prop:output-port (struct-field-index wrapped-out))
-
 (define (make-multiplexed-input-port name in)
   (define child-outs (make-gvector))
-  (define wrapped-in (make-input-port
+  (define wrapped-in (make-input-port/read-to-peek
                       name
                       (lambda (bstr)
+                        (unless (eq? (subprocess-status scryer-prolog-process) 'running)
+                          (error "Scryer Prolog is no longer running!"))
                         (define result (read-bytes! bstr in))
                         (for ([pipe (in-gvector child-outs)])
                           (write-bytes bstr pipe))
@@ -34,17 +34,23 @@
                       (thunk (close-input-port in))))
   (multiplexed-input-port name wrapped-in child-outs))
 
+(struct multiplexed-output-port [name wrapped-out child-outs]
+  #:property prop:output-port (struct-field-index wrapped-out))
+
 (define (make-multiplexed-output-port name out)
   (define child-outs (make-gvector))
   (define wrapped-out (make-output-port
                        name
                        always-evt
                        (lambda (bstr start-pos end-pos can-block? blocks?)
+                         (unless (eq? (subprocess-status scryer-prolog-process) 'running)
+                           (error "Scryer Prolog is no longer running!"))
                          (define result (write-bytes
                                          bstr
                                          out
                                          start-pos
                                          end-pos))
+                         (flush-output out)
                          (for ([pipe (in-gvector child-outs)])
                            (write-bytes bstr pipe start-pos end-pos))
                          result)
