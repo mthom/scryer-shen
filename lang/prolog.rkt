@@ -27,6 +27,7 @@
 (define (run-prolog-query! iso-prolog-query)
   (fprintf scryer-prolog-log-out "?- ")
   (fprintf scryer-prolog-out "shen_prolog_eval((~a)).~n" iso-prolog-query)
+
   (begin0
       (with-handlers ([(const #t) (lambda (e)
                                     (printf "prolog error: ~a~n" (exn->string e))

@@ -24,7 +24,10 @@
   (parameterize ([current-namespace shen-namespace]
                  [current-readtable shen-readtable])
     (let loop ()
-      (with-handlers ([exn? (lambda (e)
+      (with-handlers ([exn:break? (lambda (e)
+                                    (write-char #\newline)
+                                    (exit))]
+                      [exn? (lambda (e)
                               (printf "error: ~a~n" (exn->string e))
                               (loop))])
         (printf "(~a-) " prompt-num)
@@ -38,7 +41,6 @@
          (current-output-port))
 
         (printf "~n")
-
         (loop)))))
 
 (shen-repl)
