@@ -152,16 +152,14 @@
                                            #'rule-name)
      #'(add-prolog-predicate! iso-prolog-code)]))
 
-(define-syntax (shen-prolog? stx)
-  (syntax-parse stx
+(define-syntax shen-prolog?
+  (syntax-parser
     [(shen-prolog? goal:prolog-body-pattern ...+)
-     #:with iso-prolog-query (datum->syntax stx
-                                            (expand-shen-prolog-query #'(goal ...))
-                                            stx)
+     #:with iso-prolog-query (expand-shen-prolog-query #'(goal ...))
      #'(run-prolog-query! iso-prolog-query)]))
 
-(define-syntax (kl-defun stx)
-  (syntax-parse stx
+(define-syntax kl-defun
+  (syntax-parser
     [(kl-defun defun:kl-defun)
      #'(define-shen-function defun.name defun.wrapper)]
     [defun:id #''defun]))
