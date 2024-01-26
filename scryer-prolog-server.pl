@@ -46,19 +46,18 @@ function_eval(return_to_shen(T)) :-
 write_term_to_sexpr(T, SExpr) :-
     (   var(T) ->
         phrase(format_("~w", [T]), SExpr)
+    ;   partial_string(T),
+        partial_string_tail(T, []) ->
+        phrase(format_("\"~s\"", [T]), SExpr)
     ;   T =.. [TF | TArgs],
         write_functor_to_sexpr(TF, TArgs, SExpr)
     ).
 
 write_functor_to_sexpr('.', [Car, Cdr], SExpr) :-
     !,
-    (   partial_string([Car | Cdr]),
-        partial_string_tail([Car | Cdr], []) ->
-        phrase(format_("\"~s\"", [Car | Cdr]), SExpr)
-    ;   write_term_to_sexpr(Car, CarSExpr),
-        write_term_to_sexpr(Cdr, CdrSExpr),
-        phrase(format_("[cons ~s ~s]", [CarSExpr, CdrSExpr]), SExpr)
-    ).
+    write_term_to_sexpr(Car, CarSExpr),
+    write_term_to_sexpr(Cdr, CdrSExpr),
+    phrase(format_("[cons ~s ~s]", [CarSExpr, CdrSExpr]), SExpr).
 write_functor_to_sexpr(TF, [], SExpr) :-
     phrase(format_("~w", [TF]), SExpr).
 write_functor_to_sexpr(TF, [TArg|TArgs], SExpr) :-
