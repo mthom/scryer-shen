@@ -21,13 +21,25 @@
   (define scryer-prolog-canvas
     (new editor-canvas%
          [parent frame]
-         [style '(auto-vscroll auto-hscroll no-focus)]))
+         [style '(auto-hscroll auto-vscroll resize-corner)]))
+
+  (send scryer-prolog-canvas set-canvas-background
+        (make-object color% "black"))
 
   (define scryer-prolog-text
     (new text%
          [auto-wrap #t]))
 
   (send scryer-prolog-canvas set-editor scryer-prolog-text)
+  (send scryer-prolog-text change-style
+        (let ([color-delta (make-object style-delta% 'change-normal-color)])
+          (send color-delta set-delta-background "black")
+          (send color-delta set-delta-foreground "green")
+          color-delta))
+  (send scryer-prolog-text change-style
+        (let ([font-delta  (make-object style-delta% 'change-family 'modern)])
+          (send font-delta set-delta 'change-size 16)
+          font-delta))
 
   ; Show the frame by calling its show method
   (send frame show #t)
