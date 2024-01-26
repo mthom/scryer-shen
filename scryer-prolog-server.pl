@@ -11,8 +11,8 @@ shen_prolog_eval(Query) :-
           E,
           write_error_to_sexpr(E)).
 
-write_error_to_sexpr(error(Error)) :-
-    format("[(error \"~w\") false]~n", [Error]),
+write_error_to_sexpr(error(Error, Src)) :-
+    format("[(error \"error(~w, ~w)\") false]~n", [Error, Src]),
     false.
 
 shen_prolog_eval_(Query) :-
@@ -29,6 +29,7 @@ shen_prolog_eval_(_) :-
 pause_or_return(none, Ball) :-
     function_eval(Ball).
 pause_or_return(cont(Cont), bind(F,X)) :-
+    !,
     function_eval(bind(F,X)),
     shen_prolog_eval(Cont).
 pause_or_return(cont(_Cont), return_to_shen(T)) :-
@@ -51,8 +52,9 @@ write_term_to_sexpr(T, SExpr) :-
 
 write_functor_to_sexpr('.', [Car, Cdr], SExpr) :-
     !,
-    (   partial_string([Car | Cdr], Str, []) ->
-        phrase(format_("\"~s\"", [Str]), SExpr)
+    (   partial_string([Car | Cdr]),
+        partial_string_tail([Car | Cdr], []) ->
+        phrase(format_("\"~s\"", [Car | Cdr]), SExpr)
     ;   write_term_to_sexpr(Car, CarSExpr),
         write_term_to_sexpr(Cdr, CdrSExpr),
         phrase(format_("[cons ~s ~s]", [CarSExpr, CdrSExpr]), SExpr)

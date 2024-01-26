@@ -2,6 +2,7 @@
 
 (require "namespaces.rkt"
          "printer.rkt"
+         "prolog-debug-gui.rkt"
          (only-in "reader.rkt" shen-readtable)
          "scryer-prolog-interface.rkt"
          (prefix-in shen: "system-functions.rkt")
@@ -19,9 +20,11 @@
                      expand-shen-prolog-query))
 
 (define (add-prolog-predicate! iso-prolog-code)
+  (fprintf scryer-prolog-log-out "?- ")
   (fprintf scryer-prolog-out "[user].~n~a~nend_of_file.~n" iso-prolog-code))
 
 (define (run-prolog-query! iso-prolog-query)
+  (fprintf scryer-prolog-log-out "?- ")
   (fprintf scryer-prolog-out "shen_prolog_eval((~a)).~n" iso-prolog-query)
   (begin0
       (let loop ()

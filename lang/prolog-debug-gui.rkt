@@ -2,12 +2,13 @@
 
 (require "scryer-prolog-interface.rkt")
 
-(provide open-prolog-debug-gui)
+(provide open-prolog-debug-gui
+         (rename-out [sp-connector-out scryer-prolog-log-out]))
+
+(define-values (sp-connector-in sp-connector-out)
+  (make-pipe))
 
 (define (open-prolog-debug-gui)
-  (define-values (sp-connector-in sp-connector-out)
-    (make-pipe))
-
   (add-multiplexed-input-port-pipe! scryer-prolog-in sp-connector-out)
   (add-multiplexed-input-port-pipe! scryer-prolog-err sp-connector-out)
   (add-multiplexed-output-port-pipe! scryer-prolog-out sp-connector-out)
