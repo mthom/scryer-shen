@@ -67,8 +67,10 @@
 (define scryer-prolog-err (make-multiplexed-input-port 'scryer-prolog-err err))
 (define scryer-prolog-out (make-multiplexed-output-port 'scryer-prolog-in out))
 
-(define sp-ports-executor (make-will-executor))
+(define sp-executor (make-will-executor))
 
-(will-register sp-ports-executor scryer-prolog-in close-input-port)
-(will-register sp-ports-executor scryer-prolog-out close-output-port)
-(will-register sp-ports-executor scryer-prolog-err close-input-port)
+(will-register sp-executor scryer-prolog-process (lambda (_) (fprintf scryer-prolog-out "halt.~n")))
+
+(will-register sp-executor scryer-prolog-in close-input-port)
+(will-register sp-executor scryer-prolog-out close-output-port)
+(will-register sp-executor scryer-prolog-err close-input-port)
