@@ -44,7 +44,9 @@
     (make-readtable #f
                     #\[ 'terminating-macro (read-list)
                     #\| 'terminating-macro (const #\|)
-                    #\; 'terminating-macro (const #\;)))
+                    #\; 'terminating-macro (const #\;)
+                    ;; parse # like any other symbol char
+                    #\# #\a (current-readtable)))
 
   (define (consume-spaces in)
     (define ch (peek-char in))
@@ -53,25 +55,26 @@
       (consume-spaces in)))
 
   (define (read-list-items in [src #f])
-    (datum->syntax #f
-                   (for/list ([term (in-generator
-                                     (let loop ()
-                                       (consume-spaces in)
-                                       (case (peek-char in)
-                                         ([#\]] (read-char in)
-                                                (yield (datum->syntax #f '()))
-                                                (yield (void)))
-                                         ([#\|] (read-char in)
-                                                (consume-spaces in)
-                                                (let ([term (read-syntax/recursive src in)])
-                                                  (consume-spaces in)
-                                                  (if (equal? (peek-char in) #\])
-                                                      (yield term)
-                                                      (let-values ([(line col pos) (port-next-location in)])
-                                                        (raise-read-error "expected a closing ']'" src line col pos 1))))
-                                                (read-char in)
-                                                (yield (void)))
-                                         (else (yield (read-syntax/recursive src in))))
-                                       (loop)))]
-                              #:break (void? term))
-                     term))))
+    (define list-contents
+      (for/list ([term (in-generator
+                        (let loop ()
+                          (consume-spaces in)
+                          (case (peek-char in)
+                            ([#\]] (read-char in)
+                                   (yield (datum->syntax #f '()))
+                                   (yield (void)))
+                            ([#\|] (read-char in)
+                                   (consume-spaces in)
+                                   (let ([term (read-syntax/recursive src in)])
+                                     (consume-spaces in)
+                                     (if (equal? (peek-char in) #\])
+                                         (yield term)
+                                         (let-values ([(line col pos) (port-next-location in)])
+                                           (raise-read-error "expected a closing ']'" src line col pos 1))))
+                                   (read-char in)
+                                   (yield (void)))
+                            (else (yield (read-syntax/recursive src in))))
+                          (loop)))]
+                 #:break (void? term))
+        term))
+    (datum->syntax #f list-contents)))

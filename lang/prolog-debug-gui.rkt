@@ -40,7 +40,6 @@
           (send font-delta set-delta 'change-size 16)
           font-delta))
 
-  ; Show the frame by calling its show method
   (send frame show #t)
 
   (thread (lambda ()

@@ -1,7 +1,6 @@
 #lang racket
 
 (require data/gvector
-         "printer.rkt"
          racket
          (for-template
           racket/base
@@ -32,7 +31,8 @@
          shen-lambda-form
          shen-let-form
          shen-prolog-rule
-         underscore-hyphen)
+         underscore-hyphen
+         write-as-prolog-datum)
 
 (define (capitalized-symbol? symbol)
   (and (symbol? symbol)
@@ -58,6 +58,30 @@
                       "-"
                       (string-replace underlying-str "-" "_"))
                   string-port)))
+
+;; write-as-prolog-datum is not redundant: runtime data need
+;; special handling since they don't have the syntactic structure
+;; exploited by prolog-syntax-writers at compile time.
+
+(define (write-as-prolog-datum datum [port (open-output-string)])
+  (let loop ([datum datum])
+    (match datum
+      [(cons hd tl)
+       (write-string "[" port)
+       (loop hd)
+       (write-string "|" port)
+       (loop tl)
+       (write-string "]" port)]
+      [(or '() (? void?))
+       (write-string "[]" port)]
+      [(? string?)
+       (fprintf port "\"~s\"" datum)]
+      [(== #t eq?)
+       (fprintf port "true")]
+      [(== #f eq?)
+       (fprintf port "false")]
+      [_
+       (write datum port)])))
 
 (define (prolog-syntax-writers query?)
   (define string-port (open-output-string))
@@ -88,101 +112,106 @@
                               (datum->syntax stx result-binding stx))]
                            [form #'form]))]
            [write-prolog-datum (lambda (rule [top-level? #f])
-                   (syntax-parse rule
-                     [((~datum cons) hd tl)
-                      (let ([hd (shift-args #'hd)]
-                            [tl (shift-args #'tl)])
-                        (write-string "[" string-port)
-                        (write-prolog-datum hd)
-                        (write-string " | " string-port)
-                        (write-prolog-datum tl)
-                        (write-string "]" string-port))]
-                     [((~datum use-module) ((~datum library) lib-id:id))
-                      #:when (and top-level? query?)
-                      (write-string "use_module(library(" string-port)
-                      (underscore-hyphen #'lib-id string-port)
-                      (write-string "))" string-port)]
-                     [((~datum is!) x t)
-                      #:when top-level?
-                      (let ([x (shift-args #'x)]
-                            [t (shift-args #'t)])
-                        (write-string "unify_with_occurs_check(" string-port)
-                        (write-prolog-datum x)
-                        (write-string ", " string-port)
-                        (write-prolog-datum t)
-                        (write-string ")" string-port))]
-                     [((~datum findall) pat predicate solutions)
-                      #:when top-level?
-                      (write-string "findall(" string-port)
-                      (write-prolog-datum #'pat)
-                      (write-string ", " string-port)
-                      (write-prolog-datum #'predicate #t)
-                      (write-string ", " string-port)
-                      (write-prolog-datum #'solutions)
-                      (write-string ")" string-port)]
-                     [((~or (~datum is) (~datum bind)) x t)
-                      #:when top-level?
-                      (let ([x (shift-args #'x)]
-                            [t (shift-args #'t)])
-                        (write-string "=(" string-port)
-                        (write-prolog-datum x)
-                        (write-string ", " string-port)
-                        (write-prolog-datum t)
-                        (write-string ")" string-port))]
-                     [((~datum ~) t)
-                      #:when top-level?
-                      (let ([t (shift-args #'t)])
-                        (write-string "\\+(" string-port)
-                        (write-prolog-datum t #t)
-                        (write-string ")" string-port))]
-                     [((~datum return) t)
-                      #:when top-level?
-                      ;; Shen Prolog doesn't have non-list functors
-                      ;; so there's no way to spoof the return_to_shen/1
-                      ;; convention.
-                      (let ([t (shift-args #'t)])
-                        (write-string "shift(return_to_shen(" string-port)
-                        (write-prolog-datum t)
-                        (write-string "))" string-port))]
-                     [((~datum var?) t)
-                      #:when top-level?
-                      (let ([t (shift-args #'t)])
-                        (write-string "var(" string-port)
-                        (write-prolog-datum t))
-                      (write-string ")" string-port)]
-                     [((~datum fork) arg . args)
-                      #:when top-level?
-                      (write-string "(" string-port)
-                      (write-prolog-datum #'arg #t)
-                      (stx-map (lambda (stx)
-                                 (write-string "; " string-port)
-                                 (write-prolog-datum stx #t))
-                               #'args)
-                      (write-string ")" string-port)]
-                     [((~or (~datum +) (~datum -)) form)
-                      (write-prolog-datum #'form top-level?)]
-                     [((~datum when) t)
-                      #:when top-level?
-                      (let ([t (shift-args #'t)])
-                        (write-prolog-datum t)
-                        (write-string " = true" string-port))]
-                     [(hd . tl)
-                      (let ([tl (if top-level? (stx-map shift-args #'tl) #'tl)])
-                        (write-prolog-datum #'hd)
-                        (unless (stx-null? tl)
-                          (write-string "(" string-port)
-                          (write-prolog-goals tl #f)
-                          (write-string ")" string-port)))]
-                     [(~datum !)
-                      #:when top-level?
-                      (write-string "!" string-port)]
-                     [(~and atom:id (~not atom:shen-var-id))
-                      #:when (not top-level?)
-                      (underscore-hyphen #'atom string-port)]
-                     [atom
-                      (if top-level?
-                          (raise-syntax-error #f "goals must be represented as s-expressions")
-                          (shen-printer (syntax->datum #'atom) string-port))]))]
+                                 (syntax-parse rule
+                                   [((~datum cons) hd tl)
+                                    (let ([hd (shift-args #'hd)]
+                                          [tl (shift-args #'tl)])
+                                      (write-string "[" string-port)
+                                      (write-prolog-datum hd)
+                                      (write-string " | " string-port)
+                                      (write-prolog-datum tl)
+                                      (write-string "]" string-port))]
+                                   [((~datum use-module) ((~datum library) lib-id:id))
+                                    #:when (and top-level? query?)
+                                    (write-string "use_module(library(" string-port)
+                                    (underscore-hyphen #'lib-id string-port)
+                                    (write-string "))" string-port)]
+                                   [((~datum use-module) file-name:id)
+                                    #:when (and top-level? query?)
+                                    (write-string "use_module('" string-port)
+                                    (write (syntax->datum #'file-name) string-port)
+                                    (write-string "')" string-port)]
+                                   [((~datum is!) x t)
+                                    #:when top-level?
+                                    (let ([x (shift-args #'x)]
+                                          [t (shift-args #'t)])
+                                      (write-string "unify_with_occurs_check(" string-port)
+                                      (write-prolog-datum x)
+                                      (write-string ", " string-port)
+                                      (write-prolog-datum t)
+                                      (write-string ")" string-port))]
+                                   [((~datum findall) pat predicate solutions)
+                                    #:when top-level?
+                                    (write-string "findall(" string-port)
+                                    (write-prolog-datum #'pat)
+                                    (write-string ", " string-port)
+                                    (write-prolog-datum #'predicate #t)
+                                    (write-string ", " string-port)
+                                    (write-prolog-datum #'solutions)
+                                    (write-string ")" string-port)]
+                                   [((~or (~datum is) (~datum bind)) x t)
+                                    #:when top-level?
+                                    (let ([x (shift-args #'x)]
+                                          [t (shift-args #'t)])
+                                      (write-string "=(" string-port)
+                                      (write-prolog-datum x)
+                                      (write-string ", " string-port)
+                                      (write-prolog-datum t)
+                                      (write-string ")" string-port))]
+                                   [((~datum ~) t)
+                                    #:when top-level?
+                                    (let ([t (shift-args #'t)])
+                                      (write-string "\\+(" string-port)
+                                      (write-prolog-datum t #t)
+                                      (write-string ")" string-port))]
+                                   [((~datum return) t)
+                                    #:when top-level?
+                                    ;; Shen Prolog doesn't have non-list functors
+                                    ;; so there's no way to spoof the return_to_shen/1
+                                    ;; convention.
+                                    (let ([t (shift-args #'t)])
+                                      (write-string "shift(return_to_shen(" string-port)
+                                      (write-prolog-datum t)
+                                      (write-string "))" string-port))]
+                                   [((~datum var?) t)
+                                    #:when top-level?
+                                    (let ([t (shift-args #'t)])
+                                      (write-string "var(" string-port)
+                                      (write-prolog-datum t))
+                                    (write-string ")" string-port)]
+                                   [((~datum fork) arg . args)
+                                    #:when top-level?
+                                    (write-string "(" string-port)
+                                    (write-prolog-datum #'arg #t)
+                                    (stx-map (lambda (stx)
+                                               (write-string "; " string-port)
+                                               (write-prolog-datum stx #t))
+                                             #'args)
+                                    (write-string ")" string-port)]
+                                   [((~or (~datum +) (~datum -)) form)
+                                    (write-prolog-datum #'form top-level?)]
+                                   [((~datum when) t)
+                                    #:when top-level?
+                                    (let ([t (shift-args #'t)])
+                                      (write-prolog-datum t)
+                                      (write-string " = true" string-port))]
+                                   [(hd . tl)
+                                    (let ([tl (if top-level? (stx-map shift-args #'tl) #'tl)])
+                                      (write-prolog-datum #'hd)
+                                      (unless (stx-null? tl)
+                                        (write-string "(" string-port)
+                                        (write-prolog-goals tl #f)
+                                        (write-string ")" string-port)))]
+                                   [(~datum !)
+                                    #:when top-level?
+                                    (write-string "!" string-port)]
+                                   [(~and atom:id (~not atom:shen-var-id))
+                                    #:when (not top-level?)
+                                    (underscore-hyphen #'atom string-port)]
+                                   [atom
+                                    (if top-level?
+                                        (raise-syntax-error #f "goals must be represented as s-expressions")
+                                        (write-as-prolog-datum (syntax->datum #'atom) string-port))]))]
            [write-prolog-goals (lambda (arg-stx top-level?)
                                  (if (stx-pair? arg-stx)
                                      (begin
@@ -225,10 +254,10 @@
 
 (define-syntax-class prolog-head-pattern
   #:datum-literals (<--)
-  (pattern (~and (~not (~or <-- (~datum #\;))))))
+  (pattern (~not (~or <-- (~datum #\;)))))
 
 (define-syntax-class prolog-body-pattern
-  (pattern (~and (~not (~datum #\;)))))
+  (pattern (~not (~datum #\;))))
 
 (define-syntax-class shen-op-assoc
   (pattern (~or #:right #:left)))

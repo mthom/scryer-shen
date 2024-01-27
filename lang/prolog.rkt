@@ -1,12 +1,12 @@
 #lang racket
 
 (require "namespaces.rkt"
-         "printer.rkt"
          "prolog-debug-gui.rkt"
          (only-in racket/exn
                   exn->string)
          (only-in "reader.rkt" shen-readtable)
          "scryer-prolog-interface.rkt"
+         (only-in "syntax-utils.rkt" write-as-prolog-datum)
          (prefix-in shen: "system-functions.rkt")
          (for-syntax
           data/gvector
@@ -41,37 +41,13 @@
              (define result (shen:eval fn-call))
              (if continue?
                  (begin
-                   (shen-printer result scryer-prolog-out)
+                   (write-as-prolog-datum result scryer-prolog-out)
                    (fprintf scryer-prolog-out ".~n")
                    (loop))
                  result)]
             [_ #f])))
     ;; read in solutions line, which scryer-shen does not use
     (read-line scryer-prolog-in)))
-
-;; shen-datum->prolog-datum is not redundant: runtime data need
-;; special handling since they don't have the syntactic structure
-;; exploited by prolog-syntax-writers at compile time.
-
-(define (shen-datum->prolog-datum datum)
-  (define port (open-output-string))
-
-  (let loop ([datum datum])
-    (match datum
-      [(cons hd tl)
-       (write-string "[" port)
-       (loop hd)
-       (write-string "|" port)
-       (loop tl)
-       (write-string "]" port)]
-      [(or '() (? void?))
-       (write-string "[]" port)]
-      [(? string?)
-       (fprintf port "\"~s\"" datum)]
-      [_
-       (write datum port)]))
-
-  (get-output-string port))
 
 (begin-for-syntax
   (define (expand-shen-defprolog name rules)
@@ -106,5 +82,8 @@
       (apply format
              #,(get-output-string string-port)
              (map
-              shen-datum->prolog-datum
+              (lambda (shen-value)
+                (let ([port (open-output-string)])
+                  (write-as-prolog-datum shen-value port)
+                  (get-output-string port)))
               (list #,@(gvector->list received-vars-vec)))))))
