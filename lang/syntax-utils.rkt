@@ -97,6 +97,11 @@
                         (write-string " | " string-port)
                         (write-prolog-datum tl)
                         (write-string "]" string-port))]
+                     [((~datum use-module) ((~datum library) lib-id:id))
+                      #:when (and top-level? query?)
+                      (write-string "use_module(library(" string-port)
+                      (underscore-hyphen #'lib-id string-port)
+                      (write-string "))" string-port)]
                      [((~datum is!) x t)
                       #:when top-level?
                       (let ([x (shift-args #'x)]
