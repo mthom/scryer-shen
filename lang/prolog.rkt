@@ -20,6 +20,11 @@
          (for-syntax expand-shen-defprolog
                      expand-shen-prolog-query))
 
+(define (peek-for-prolog-warning)
+  (when (eq? (peek-char scryer-prolog-in) #\%)
+    (read-line scryer-prolog-in)
+    (peek-for-prolog-warning)))
+
 (define (add-prolog-predicate! iso-prolog-code)
   (fprintf scryer-prolog-log-out "?- ")
   (fprintf scryer-prolog-out "[user].~n~a~nend_of_file.~n" iso-prolog-code))
@@ -34,6 +39,7 @@
                                     (read-char scryer-prolog-in) ;; read trailing newline
                                     #f)])
         (let loop ()
+          (peek-for-prolog-warning)
           (match (parameterize ([current-readtable shen-readtable])
                    (shen:eval (read scryer-prolog-in)))
             [(cons fn-call (cons continue? empty))
