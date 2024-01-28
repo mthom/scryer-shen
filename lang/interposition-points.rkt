@@ -25,7 +25,7 @@
   (syntax-parse stx
     [(top . id:shen-var-id)
      (if (syntax-property #'id 'bound)
-         #'(#%top . id)
+         (syntax/loc stx (#%top . id))
          (syntax/loc stx (quote id)))]
     [(top . id:id)
      (syntax/loc stx (quote id))]))
