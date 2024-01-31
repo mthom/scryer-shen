@@ -2,6 +2,7 @@
 
 (require "bindings.rkt"
          (only-in racket
+                  [foldr r:foldr]
                   [map r:map]
                   [eval r:eval]
                   [load r:load])
@@ -15,7 +16,7 @@
          "macros.rkt"
          "namespaces.rkt"
          (only-in "reader.rkt"
-                  shen-readtable)
+                  [read-syntax shen:read-syntax])
          (for-syntax syntax/parse)
          syntax/strip-context)
 
@@ -92,6 +93,9 @@
 (define (map fn list)
   (r:map (function fn) list))
 
+(define (foldr fn acc list)
+  (r:foldr (function fn) acc list))
+
 (define (cd string)
   (current-directory string))
 
@@ -133,9 +137,9 @@
 (define (load filename)
   (define in (open-input-file filename))
   (define expanded-forms
-    (parameterize ([current-readtable shen-readtable])
-      (for/list ([stx (in-port (curry read-syntax (object-name in)) in)])
-        (expand (strip-context (expand-shen-form stx))))))
+    ;; (parameterize ([current-readtable shen-readtable])
+      (for/list ([stx (in-port (curry shen:read-syntax (object-name in)) in)])
+        (expand (strip-context (expand-shen-form stx)))));; )
   (close-input-port in)
   (eval-syntax #`(begin #,@expanded-forms))
   'loaded)

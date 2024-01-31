@@ -53,14 +53,3 @@
 
 (define foo-2
   X -> (prolog? (f (receive X) (h (g (receive X) X) (g Y)))))
-
-#|
-;;FIXME: this does not work. the namespace-requires are not done in time.
-(package foo (append (external math) [log])
-  (define my-head
-    [X | Y] -> X
-    [] -> (error "head: empty list"))
-
-  (defmacro log-macro
-    [log N] -> [+ N 1]))
-|#

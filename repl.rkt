@@ -12,6 +12,7 @@
          "lang/printer.rkt"
          "lang/prolog-debug-gui.rkt"
          (only-in "lang/reader.rkt"
+                  detect-prolog-syntax
                   shen-readtable)
          (only-in "lang/system-functions.rkt"
                   [eval shen:eval])
@@ -37,7 +38,9 @@
         (shen-printer
          (shen:eval
           (syntax->datum
-           (expand-shen-form (read-syntax))))
+           (detect-prolog-syntax
+            (expand-shen-form
+             (read-syntax)))))
          (current-output-port))
 
         (printf "~n")

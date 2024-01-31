@@ -92,10 +92,9 @@
                             #:when query?
                             (gvector-add! received-vars-vec #'id)
                             (datum->syntax stx '~a stx)]
-                           [((~datum cons) hd tl)
-                            (let ([hd (shift-args #'hd #f)]
-                                  [tl (shift-args #'tl #f)])
-                              (quasisyntax/loc stx (cons #,hd #,tl)))]
+                           [(~or ((~datum cons) hd tl)
+                                 ((~datum #%prolog-functor) . args))
+                            stx]
                            [(hd . tl)
                             #:when top-level-arg?
                             (let ([hd (shift-args #'hd #f)]
@@ -195,6 +194,12 @@
                                     (let ([t (shift-args #'t)])
                                       (write-prolog-datum t)
                                       (write-string " = true" string-port))]
+                                   [((~datum #%prolog-functor) id:id . args)
+                                    (let ([args (stx-map shift-args #'args)])
+                                      (write (syntax->datum #'id) string-port)
+                                      (write-string "(" string-port)
+                                      (write-prolog-goals args #f)
+                                      (write-string ")" string-port))]
                                    [(hd . tl)
                                     (let ([tl (if top-level? (stx-map shift-args #'tl) #'tl)])
                                       (write-prolog-datum #'hd)

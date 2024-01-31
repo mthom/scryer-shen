@@ -15,17 +15,63 @@
   (require "macros.rkt"
            racket
            racket/generator
+           syntax/parse
            syntax/readerr
            syntax/strip-context
            syntax/stx)
 
-  (provide shen-readtable)
+  (provide detect-prolog-syntax
+           shen-readtable)
 
   (define (wrapper1 t is-syntax?)
     (parameterize ([current-readtable shen-readtable])
       (if is-syntax?
-          (strip-context (expand-shen-form (t)))
-          (syntax->datum (expand-shen-form (datum->syntax #f (t)))))))
+          (strip-context (detect-prolog-syntax (expand-shen-form (t))))
+          (syntax->datum (detect-prolog-syntax (expand-shen-form (datum->syntax #f (t))))))))
+
+  (define (detect-prolog-syntax stx)
+    (syntax-parse stx
+      [((~datum defprolog) . body)
+       (quasisyntax/loc stx
+         (defprolog . #,(tag-prolog-functors #'body)))]
+      [((~datum prolog?) . body)
+       (quasisyntax/loc stx
+         (prolog? . #,(tag-prolog-functors #'body)))]
+      [(a . d)
+       (quasisyntax/loc stx
+         (#,(detect-prolog-syntax #'a)
+          .
+          #,(detect-prolog-syntax #'d)))]
+      [_ stx]))
+
+  (define (tag-prolog-functors stx)
+    (syntax-parse stx
+      [(id:id (~and (arg:expr ...+) brackets) . more)
+       ;; 'paren-shape property being null affirms that round brackets were used
+       (cond [(and (not (syntax-property #'brackets 'paren-shape))
+                   (= (+ (syntax-position #'id) (syntax-span #'id))
+                      (syntax-position #'brackets)))
+              (let ([adjusted-more (tag-prolog-functors #'more)]
+                    [arguments     (tag-prolog-functors #'(arg ...))])
+                (datum->syntax
+                 #f
+                 `((#%prolog-functor ,#'id ,@arguments) . ,adjusted-more)
+                 stx))]
+             [else
+              (with-syntax ([(_ . rest) stx])
+                (let ([adjusted-rest (tag-prolog-functors #'rest)])
+                  (datum->syntax #f
+                                 `(,#'id . ,adjusted-rest)
+                                 stx)))])]
+      [(a:id . d)
+       #:when (free-identifier=? #'a #'#%prolog-functor)
+       (raise-syntax-error #f "#%prolog-functor is a reserved symbol in defprolog and prolog? contexts" stx)]
+      [(a . d)
+       (quasisyntax/loc stx
+         (#,(tag-prolog-functors #'a)
+          .
+          #,(tag-prolog-functors #'d)))]
+      [_ stx]))
 
   (define (shen-cons-fold list-items)
     (foldr (lambda (item acc) (if (void? acc) item #`(cons #,item #,acc)))

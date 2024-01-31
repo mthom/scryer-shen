@@ -2,6 +2,7 @@
 
 (require (except-in racket
                     load
+                    foldr
                     map
                     eval
                     set)
@@ -21,6 +22,7 @@
                          [< #:arity 2]
                          [equal? = #:arity 2]
                          [equal? == #:arity 2]
+                         [foldr #:arity 3]
                          [>= #:arity 2]
                          [<= #:arity 2]
                          [make-vector absvector #:arity 1]

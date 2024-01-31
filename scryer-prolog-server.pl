@@ -36,34 +36,38 @@ pause_or_return(cont(_Cont), return_to_shen(T)) :-
     function_eval(return_to_shen(T)).
 
 function_eval(bind(F,X)) :-
-    write_term_to_sexpr(F, SExpr),
+    functor_sexpr("(~w ", F, SExpr),
     format("[~s true]~n", [SExpr]), % write to scryer-shen which is listening to stdout ...
     read(X).                        % .. and block until the result is read back from scryer-shen.
 function_eval(return_to_shen(T)) :-
-    write_term_to_sexpr(T, SExpr),
+    functor_sexpr("[~w ", T, SExpr),
     format("[~s false]~n", [SExpr]).
 
-write_term_to_sexpr(T, SExpr) :-
+functor_sexpr(FunctorRep, T, SExpr) :-
     (   var(T) ->
         phrase(format_("~w", [T]), SExpr)
     ;   partial_string(T),
         partial_string_tail(T, []) ->
         phrase(format_("\"~s\"", [T]), SExpr)
     ;   T =.. [TF | TArgs],
-        write_functor_to_sexpr(TF, TArgs, SExpr)
+        functor_args_sexpr(FunctorRep, TF, TArgs, SExpr)
     ).
 
-write_functor_to_sexpr('.', [Car, Cdr], SExpr) :-
-    !,
-    write_term_to_sexpr(Car, CarSExpr),
-    write_term_to_sexpr(Cdr, CdrSExpr),
-    phrase(format_("[cons ~s ~s]", [CarSExpr, CdrSExpr]), SExpr).
-write_functor_to_sexpr(TF, [], SExpr) :-
-    phrase(format_("~w", [TF]), SExpr).
-write_functor_to_sexpr(TF, [TArg|TArgs], SExpr) :-
-    maplist(write_term_to_sexpr, [TArg|TArgs], ArgSExprs),
-    phrase(format_("(~w ", [TF]), SExpr, SExprRest),
-    foldl(write_term_arg_to_sexpr, ArgSExprs, SExprRest, ")").
+end_bracket("(~w ", ")").
+end_bracket("[~w ", "]").
 
-write_term_arg_to_sexpr(SExprArg, SExprHead, SExprTail) :-
+functor_args_sexpr(FunctorRep, '.', [Car, Cdr], SExpr) :-
+    !,
+    functor_sexpr(FunctorRep, Car, CarSExpr),
+    functor_sexpr(FunctorRep, Cdr, CdrSExpr),
+    phrase(format_("[cons ~s ~s]", [CarSExpr, CdrSExpr]), SExpr).
+functor_args_sexpr(_FunctorRep, TF, [], SExpr) :-
+    phrase(format_("~w", [TF]), SExpr).
+functor_args_sexpr(FunctorRep, TF, [TArg|TArgs], SExpr) :-
+    maplist(functor_sexpr(FunctorRep), [TArg|TArgs], ArgSExprs),
+    phrase(format_(FunctorRep, [TF]), SExpr, SExprRest),
+    end_bracket(FunctorRep, EndBracket),
+    foldl(functor_arg_sexpr, ArgSExprs, SExprRest, EndBracket).
+
+functor_arg_sexpr(SExprArg, SExprHead, SExprTail) :-
     phrase(format_("~s ", [SExprArg]), SExprHead, SExprTail).

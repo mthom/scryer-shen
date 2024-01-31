@@ -4,6 +4,7 @@
                   [eval shen:eval]
                   function)
          "macros.rkt"
+         (only-in "reader.rkt" detect-prolog-syntax)
          (for-syntax syntax/parse
                      "syntax-utils.rkt"))
 
@@ -33,5 +34,7 @@
 (define-syntax (top-interaction stx)
   (syntax-parse stx
     [(top-interaction . form)
-     #:with expanded-form #`(shen:eval (syntax->datum (expand-shen-form #'#,#'form)))
+     #:with expanded-form #`(shen:eval (syntax->datum
+                                        (detect-prolog-syntax
+                                         (expand-shen-form #'#,#'form))))
      (syntax/loc stx (#%top-interaction . expanded-form))]))

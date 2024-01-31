@@ -44,13 +44,12 @@
                    (shen:eval (read scryer-prolog-in)))
             [(cons fn-call (cons continue? empty))
              (read-char scryer-prolog-in) ;; read trailing newline
-             (define result (shen:eval fn-call))
              (if continue?
                  (begin
-                   (write-as-prolog-datum result scryer-prolog-out)
+                   (write-as-prolog-datum (shen:eval fn-call) scryer-prolog-out)
                    (fprintf scryer-prolog-out ".~n")
                    (loop))
-                 result)]
+                 fn-call)]
             [_ #f])))
     ;; read in solutions line, which scryer-shen does not use
     (read-line scryer-prolog-in)))
