@@ -215,7 +215,8 @@
                                     (underscore-hyphen #'atom string-port)]
                                    [atom
                                     (if top-level?
-                                        (raise-syntax-error #f "goals must be represented as s-expressions")
+                                        (raise-syntax-error #f "goals must be represented as s-expressions or functors "
+                                                            rule)
                                         (write-as-prolog-datum (syntax->datum #'atom) string-port))]))]
            [write-prolog-goals (lambda (arg-stx top-level?)
                                  (if (stx-pair? arg-stx)
