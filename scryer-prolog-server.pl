@@ -1,8 +1,10 @@
+:- use_module(library(between)).
 :- use_module(library(charsio)).
 :- use_module(library(cont)).
 :- use_module(library(dcgs)).
 :- use_module(library(format)).
 :- use_module(library(iso_ext)).
+:- use_module(library(lambda)).
 :- use_module(library(lists)).
 
 :- meta_predicate shen_prolog_eval(0, ?).
@@ -18,6 +20,49 @@ shen_prolog_eval(Query, VNs) :-
     catch(shen_prolog_eval_(Query, VNs),
           E,
           write_error_to_sexpr(E)).
+
+eq_list_match(L, [L=V1|_], V1).
+eq_list_match(L, [_|VNs], V) :-
+    eq_list_match(L, VNs, V).
+
+label_matches(_, [], [], _).
+label_matches(VNs0, [L=V1|VNs1], Matches, N) :-
+    !,
+    N1 is N+1,
+    (  eq_list_match(L, VNs0, V0),
+       V0 \== V1 ->
+       Matches = [N|Matches0],
+       label_matches(VNs0, VNs1, Matches0, N1)
+    ;  label_matches(VNs0, VNs1, Matches, N1)
+    ).
+
+provisional_variable_labels(TermVars, NumVars0, Min, VNs) :-
+    NumVars is NumVars0 + Min - 1,
+    numlist(Min, NumVars, VarLabels),
+    maplist(\V^N^VarForm^(
+                write_term_to_chars('$VAR'(N), [numbervars(true)], VCs),
+                atom_chars(VA, VCs),
+                VarForm = (VA = V)
+            ),
+            TermVars,
+            VarLabels,
+            VNs
+           ).
+
+matching_variable_labels_loop(TermVars, NumVars0, Min, VNs0, VNs) :-
+    provisional_variable_labels(TermVars, NumVars0, Min, VNs1),
+    label_matches(VNs0, VNs1, Matches, Min),
+    (   Matches == [] ->
+        append(VNs0, VNs1, VNs)
+    ;   list_max(Matches, Max),
+        Max1 is Max + 1,
+        matching_variable_labels_loop(TermVars, NumVars0, Max1, VNs0, VNs)
+    ).
+
+variable_labels(Term, VNs0, VNs) :-
+    term_variables(Term, TermVars),
+    length(TermVars, NumVars0),
+    matching_variable_labels_loop(TermVars, NumVars0, 1, VNs0, VNs).
 
 write_error_to_sexpr(error(Error, Src)) :-
     format("[(error \"error(~w, ~w)\") false]~n", [Error, Src]),
@@ -39,7 +84,8 @@ pause_or_return(cont(Cont), bind(F,X), VNs) :-
     !,
     function_eval(bind(F,X), VNs),
     shen_prolog_eval_(Cont, VNs).
-pause_or_return(cont(_Cont), return_to_shen(T), VNs) :-
+pause_or_return(cont(_Cont), return_to_shen(T), VNs0) :-
+    variable_labels(T, VNs0, VNs),
     function_eval(return_to_shen(T), VNs).
 
 function_eval(bind(F,X), VNs) :-
