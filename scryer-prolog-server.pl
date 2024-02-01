@@ -1,3 +1,4 @@
+:- use_module(library(charsio)).
 :- use_module(library(cont)).
 :- use_module(library(dcgs)).
 :- use_module(library(format)).
@@ -49,16 +50,9 @@ function_eval(return_to_shen(T), VNs) :-
     functor_sexpr(VNs, "[~w ", T, SExpr),
     format("[~s false]~n", [SExpr]).
 
-variable_name(T, [VarAtom0=Var | VNs], VarAtom) :-
-    (   T == Var ->
-        VarAtom = VarAtom0
-    ;   variable_name(T, VNs, VarAtom)
-    ).
-
 functor_sexpr(VNs, FunctorRep, T, SExpr) :-
     (   var(T) ->
-        variable_name(T, VNs, VarAtom),
-        phrase(format_("~a", [VarAtom]), SExpr)
+        write_term_to_chars(T, [variable_names(VNs)], SExpr)
     ;   partial_string(T),
         partial_string_tail(T, []) ->
         phrase(format_("\"~s\"", [T]), SExpr)

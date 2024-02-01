@@ -41,8 +41,7 @@
         (let loop ()
           (peek-for-prolog-warning)
           (match (parameterize ([current-readtable shen-readtable])
-                   (let ([form (read scryer-prolog-in)])
-                     (shen:eval form)))
+                   (shen:eval (read scryer-prolog-in)))
             [(cons fn-call (cons continue? empty))
              (read-char scryer-prolog-in) ;; read trailing newline
              (if continue?
