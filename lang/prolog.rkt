@@ -33,24 +33,23 @@
   (fprintf scryer-prolog-log-out "?- ")
   (fprintf scryer-prolog-out "shen_prolog_eval((~a)).~n" iso-prolog-query)
 
-  (begin0
-      (with-handlers ([(const #t) (lambda (e)
-                                    (printf "prolog error: ~a~n" (exn->string e))
-                                    (read-char scryer-prolog-in) ;; read trailing newline
-                                    #f)])
-        (let loop ()
-          (peek-for-prolog-warning)
-          (match (parameterize ([current-readtable shen-readtable])
-                   (shen:eval (read scryer-prolog-in)))
-            [(cons fn-call (cons continue? empty))
-             (read-char scryer-prolog-in) ;; read trailing newline
-             (if continue?
-                 (begin
-                   (write-as-prolog-datum (shen:eval fn-call) scryer-prolog-out)
-                   (fprintf scryer-prolog-out ".~n")
-                   (loop))
-                 fn-call)]
-            [_ #f])))))
+  (with-handlers ([(const #t) (lambda (e)
+                                (printf "prolog error: ~a~n" (exn->string e))
+                                (read-char scryer-prolog-in) ;; read trailing newline
+                                #f)])
+    (let loop ()
+      (peek-for-prolog-warning)
+      (match (parameterize ([current-readtable shen-readtable])
+               (shen:eval (read scryer-prolog-in)))
+        [(cons fn-call (cons continue? empty))
+         (read-char scryer-prolog-in) ;; read trailing newline
+         (if continue?
+             (begin
+               (write-as-prolog-datum (shen:eval fn-call) scryer-prolog-out)
+               (fprintf scryer-prolog-out ".~n")
+               (loop))
+             fn-call)]
+        [_ #f]))))
 
 (begin-for-syntax
   (define (expand-shen-defprolog name rules)
