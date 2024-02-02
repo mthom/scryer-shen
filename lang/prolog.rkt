@@ -50,10 +50,7 @@
                    (fprintf scryer-prolog-out ".~n")
                    (loop))
                  fn-call)]
-            [_ #f])))
-    ;; read in solutions line, which scryer-shen does not use
-    ;;(read-line scryer-prolog-in)
-    ))
+            [_ #f])))))
 
 (begin-for-syntax
   (define (expand-shen-defprolog name rules)

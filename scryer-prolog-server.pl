@@ -7,14 +7,14 @@
 :- use_module(library(lambda)).
 :- use_module(library(lists)).
 
-:- meta_predicate shen_prolog_eval(0, ?).
-
-% the goal called by Scryer Shen is shen_prolog_eval/1, so to allow
-% goal expansion to occur in the first argument of shen_prolog_eval/2,
-% declare the single argument version a meta-predicate even though it
-% is not defined anywhere.
+% the goal called by Scryer Shen is shen_prolog_eval/1, so as to allow
+% goal expansion and module expansion to occur in the first argument
+% of shen_prolog_eval/2, declare the single argument version a
+% meta-predicate even though it is not defined anywhere.
 
 :- meta_predicate shen_prolog_eval(0).
+
+:- meta_predicate shen_prolog_eval(0, ?).
 
 shen_prolog_eval(Query, VNs) :-
     catch(shen_prolog_eval_(Query, VNs),
@@ -36,7 +36,8 @@ label_matches(VNs0, [L=V1|VNs1], Matches, N) :-
     ;  label_matches(VNs0, VNs1, Matches, N1)
     ).
 
-provisional_variable_labels(TermVars, NumVars0, Min, VNs) :-
+provisional_variable_labels([], _, _, []).
+provisional_variable_labels([V|Vs], NumVars0, Min, VNs) :-
     NumVars is NumVars0 + Min - 1,
     numlist(Min, NumVars, VarLabels),
     maplist(\V^N^VarForm^(
@@ -44,7 +45,7 @@ provisional_variable_labels(TermVars, NumVars0, Min, VNs) :-
                 atom_chars(VA, VCs),
                 VarForm = (VA = V)
             ),
-            TermVars,
+            [V|Vs],
             VarLabels,
             VNs
            ).

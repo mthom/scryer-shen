@@ -165,9 +165,6 @@
                                       (write-string ")" string-port))]
                                    [((~datum return) t)
                                     #:when top-level?
-                                    ;; Shen Prolog doesn't have non-list functors
-                                    ;; so there's no way to spoof the return_to_shen/1
-                                    ;; convention.
                                     (let ([t (shift-args #'t)])
                                       (write-string "shift(return_to_shen(" string-port)
                                       (write-prolog-datum t)
