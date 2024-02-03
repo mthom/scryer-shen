@@ -179,6 +179,18 @@
          let-form.body-expr
          ...)]))
 
+(define-syntax shen-cond
+  (syntax-parser
+    [(shen-cond cond-form:shen-cond-form)
+     #'(cond [cond-form.condition cond-form.true-form]
+             ...
+             [else #f])]))
+
+(define-syntax shen-if
+  (syntax-parser
+    [(shen-if if-form:shen-if-form)
+     #'(if if-form.condition if-form.true-form if-form.false-form)]))
+
 (define-syntax (shen-true stx)
   (syntax-case stx ()
     [_:id #'#t]))
@@ -193,6 +205,8 @@
          (rename-out [shen-true true]
                      [shen-false false]
                      [shen-define define]
+                     [shen-cond cond]
+                     [shen-if if]
                      [shen-let let]
                      [shen-lambda /.]
                      [shen-defmacro defmacro]

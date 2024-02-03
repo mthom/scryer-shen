@@ -13,7 +13,7 @@
 (namespace-require module-path-to-system-function-exports kl-namespace)
 (namespace-require `(for-space function ,module-path-to-system-function-exports) kl-namespace)
 (namespace-require `(rename ,module-path-to-expander defun kl-defun) kl-namespace)
-(namespace-require `(only ,module-path-to-expander /. false let true) kl-namespace)
+(namespace-require `(only ,module-path-to-expander /. cond false if let true) kl-namespace)
 
 (namespace-require `(rename ,module-path-to-interposition-points #%app app) shen-namespace)
 (namespace-require `(rename ,module-path-to-interposition-points #%top top) shen-namespace)
@@ -21,5 +21,5 @@
 (namespace-require module-path-to-system-function-exports shen-namespace)
 (namespace-require `(for-space function ,module-path-to-system-function-exports) shen-namespace)
 (namespace-require `(rename ,module-path-to-expander defun kl-defun) shen-namespace)
-(namespace-require `(only ,module-path-to-expander /. define defmacro defprolog false let package prolog? true)
+(namespace-require `(only ,module-path-to-expander /. cond define defmacro defprolog false if let package prolog? true)
                    shen-namespace)

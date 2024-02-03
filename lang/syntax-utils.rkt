@@ -28,6 +28,8 @@
          shen-defmacro
          shen-internal-package
          shen-package
+         shen-cond-form
+         shen-if-form
          shen-lambda-form
          shen-let-form
          shen-prolog-rule
@@ -226,6 +228,14 @@
     (values string-port
             write-prolog-goals
             received-vars-vec)))
+
+(define-splicing-syntax-class shen-cond-form
+  #:attributes ((condition 1)
+                (true-form 1))
+  (pattern (~seq (condition:expr true-form:expr) ...+)))
+
+(define-splicing-syntax-class shen-if-form
+  (pattern (~seq condition:expr true-form:expr false-form:expr)))
 
 (define-splicing-syntax-class shen-lambda-form
   (pattern (~seq var:shen-var-id ... body-expr:expr ...+)))
