@@ -1,3 +1,5 @@
+:- module('$scryer-prolog-server', [shen_prolog_eval/2]).
+
 :- use_module(library(between)).
 :- use_module(library(charsio)).
 :- use_module(library(cont)).
@@ -6,13 +8,6 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(lambda)).
 :- use_module(library(lists)).
-
-% the goal called by Scryer Shen is shen_prolog_eval/1, so as to allow
-% goal expansion and module expansion to occur in the first argument
-% of shen_prolog_eval/2, declare the single argument version a
-% meta-predicate even though it is not defined anywhere.
-
-:- meta_predicate shen_prolog_eval(0).
 
 :- meta_predicate shen_prolog_eval(0, ?).
 

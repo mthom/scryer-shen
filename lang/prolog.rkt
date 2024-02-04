@@ -41,7 +41,7 @@
       (peek-for-prolog-warning)
       (match (parameterize ([current-readtable shen-readtable])
                (shen:eval (read scryer-prolog-in)))
-        [(cons fn-call (cons continue? empty))
+        [(list fn-call continue?)
          (read-char scryer-prolog-in) ;; read trailing newline
          (if continue?
              (begin

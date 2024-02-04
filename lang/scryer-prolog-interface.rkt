@@ -68,9 +68,11 @@
 (define scryer-prolog-err (make-multiplexed-input-port 'scryer-prolog-err err))
 (define scryer-prolog-out (make-multiplexed-output-port 'scryer-prolog-in out))
 
+(fprintf scryer-prolog-out "'$scryer-shen-toplevel':repl.~n")
+
 (define sp-executor (make-will-executor))
 
-(will-register sp-executor scryer-prolog-process (lambda (_) (fprintf scryer-prolog-out "halt.~n")))
+(will-register sp-executor scryer-prolog-process (lambda (_) (fprintf scryer-prolog-out "end_of_file.~n")))
 
 (will-register sp-executor scryer-prolog-in close-input-port)
 (will-register sp-executor scryer-prolog-out close-output-port)

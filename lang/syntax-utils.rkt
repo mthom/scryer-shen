@@ -102,7 +102,7 @@
                             (let ([hd (shift-args #'hd #f)]
                                   [tl (stx-map (lambda (stx) (shift-args stx #f)) #'tl)]
                                   [result-binding (gensym "G")])
-                              (write-string "shift(bind(" string-port)
+                              (write-string "cont:shift(bind(" string-port)
                               (write-prolog-datum hd)
                               (write-string "(" string-port)
                               (write-prolog-goals tl #f)
@@ -168,7 +168,7 @@
                                    [((~datum return) t)
                                     #:when top-level?
                                     (let ([t (shift-args #'t)])
-                                      (write-string "shift(return_to_shen(" string-port)
+                                      (write-string "cont:shift(return_to_shen(" string-port)
                                       (write-prolog-datum t)
                                       (write-string "))" string-port))]
                                    [((~datum var?) t)
