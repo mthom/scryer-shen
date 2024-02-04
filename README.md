@@ -43,9 +43,10 @@ scryer-shen can be run in the Racket REPL (for
 > raco exe --cs -o shen ++lib racket/lang/reader repl.rkt
 ```
 
-For this branch, the scryer-prolog executable needs to be copied to
+The scryer-prolog executable must be copied to
 the install directory `dist/bin`. It can be downloaded from the above
-link and built by following the instructions there.
+link and built by following the instructions there. Soon this requirement
+will be automated through raco.
 
 # Non-standard extensions of Shen Prolog
 
