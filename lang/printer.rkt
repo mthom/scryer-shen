@@ -41,5 +41,7 @@
      (write-string (if datum "true" "false") port)]
     [(? void?)
      (write-string "[]" port)]
+    [#\|
+     (write-string "bar!" port)]
     [_
      (write datum port)]))

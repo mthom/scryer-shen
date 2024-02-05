@@ -31,12 +31,9 @@
 
   (define (detect-prolog-syntax stx)
     (syntax-parse stx
-      [((~datum defprolog) . body)
+      [((~and id (~or (~datum defprolog) (~datum prolog?))) . body)
        (quasisyntax/loc stx
-         (defprolog . #,(tag-prolog-functors #'body)))]
-      [((~datum prolog?) . body)
-       (quasisyntax/loc stx
-         (prolog? . #,(tag-prolog-functors #'body)))]
+         (id . #,(tag-prolog-functors #'body)))]
       [(a . d)
        (quasisyntax/loc stx
          (#,(detect-prolog-syntax #'a)
@@ -63,8 +60,7 @@
                   (datum->syntax #f
                                  `(,#'id . ,adjusted-rest)
                                  stx)))])]
-      [(a:id . d)
-       #:when (free-identifier=? #'a #'#%prolog-functor)
+      [((~literal #%prolog-functor) . d)
        (raise-syntax-error #f "#%prolog-functor is a reserved symbol in defprolog and prolog? contexts" stx)]
       [(a . d)
        (quasisyntax/loc stx
@@ -78,7 +74,7 @@
            (void)
            (syntax->list list-items)))
 
-  (define (read-list)
+  (define read-list
     (case-lambda
       [(ch in)
        (syntax->datum
@@ -86,11 +82,21 @@
       [(ch in src line col pos)
        (shen-cons-fold (read-list-items in src))]))
 
+  (define read-shen-comment
+    (case-lambda
+      [(ch in)
+       (read-shen-comment- in)]
+      [(ch in src line col pos)
+       (read-shen-comment- in src)]))
+
   (define shen-readtable
     (make-readtable #f
-                    #\[ 'terminating-macro (read-list)
+                    #\[ 'terminating-macro read-list
                     #\| 'terminating-macro (const #\|)
-                    #\; 'terminating-macro (const #\;)
+                    #\; 'terminating-macro (const '|;|)
+                    #\, 'terminating-macro (const '|,|)
+                    #\: 'terminating-macro (const '|:|)
+                    #\\ 'terminating-macro read-shen-comment
                     ;; parse # like any other symbol char
                     #\# #\a (current-readtable)))
 
@@ -99,6 +105,18 @@
     (when (and (char? ch) (char-whitespace? ch))
       (read-char in)
       (consume-spaces in)))
+
+  (define (read-shen-comment- in [src #f])
+    (when (eq? (peek-char in) #\*)
+      (read-char in) ;; read the #\*
+      (define comment-chars
+        (for/list ([ch (in-input-port-chars in)]
+                   #:break (and (eq? ch #\*)
+                                (eq? (peek-char in) #\\)))
+          ch))
+
+      (read-char in) ;; read the final #\\
+      (make-special-comment (list->string comment-chars))))
 
   (define (read-list-items in [src #f])
     (define list-contents

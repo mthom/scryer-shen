@@ -267,10 +267,10 @@
 
 (define-syntax-class prolog-head-pattern
   #:datum-literals (<--)
-  (pattern (~not (~or <-- (~datum #\;)))))
+  (pattern (~not (~or <-- (~literal |;|)))))
 
 (define-syntax-class prolog-body-pattern
-  (pattern (~not (~datum #\;))))
+  (pattern (~not (~literal |;|))))
 
 (define-syntax-class shen-op-assoc
   (pattern (~or #:right #:left)))
@@ -415,4 +415,4 @@
   (pattern (~seq head-form:prolog-head-pattern ...
                  <--
                  body-form:prolog-body-pattern ...
-                 (~datum #\;))))
+                 (~literal |;|))))
