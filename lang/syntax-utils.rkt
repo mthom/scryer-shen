@@ -193,7 +193,7 @@
                                     (let ([t (shift-args #'t)])
                                       (write-prolog-datum t)
                                       (write-string " = true" string-port))]
-                                   [((~datum #%prolog-functor) id:id . args)
+                                   [((~literal #%prolog-functor) id:id . args)
                                     (let ([args (stx-map shift-args #'args)])
                                       (write (syntax->datum #'id) string-port)
                                       (write-string "(" string-port)

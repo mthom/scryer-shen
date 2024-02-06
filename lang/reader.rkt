@@ -60,8 +60,6 @@
                   (datum->syntax #f
                                  `(,#'id . ,adjusted-rest)
                                  stx)))])]
-      [((~literal #%prolog-functor) . d)
-       (raise-syntax-error #f "#%prolog-functor is a reserved symbol in defprolog and prolog? contexts" stx)]
       [(a . d)
        (quasisyntax/loc stx
          (#,(tag-prolog-functors #'a)
@@ -97,6 +95,8 @@
                     #\, 'terminating-macro (const '|,|)
                     #\: 'terminating-macro (const '|:|)
                     #\\ 'terminating-macro read-shen-comment
+                    #\{ #\a (current-readtable)
+                    #\} #\a (current-readtable)
                     ;; parse # like any other symbol char
                     #\# #\a (current-readtable)))
 
