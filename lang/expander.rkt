@@ -8,7 +8,8 @@
          "prolog.rkt"
          "systemf.rkt"
          syntax/parse/define
-         (for-syntax racket/base
+         (for-syntax "prolog-syntax.rkt"
+                     racket/base
                      racket/function
                      racket/match
                      racket/provide-transform

@@ -1,24 +1,16 @@
 #lang racket
 
-(require "namespaces.rkt"
-         "prolog-debug-gui.rkt"
+(require "prolog-debug-gui.rkt"
+         (only-in "prolog-syntax.rkt"
+                  write-as-prolog-datum)
          (only-in racket/exn
                   exn->string)
          (only-in "reader.rkt" shen-readtable)
          "scryer-prolog-interface.rkt"
-         (only-in "syntax-utils.rkt" write-as-prolog-datum)
-         (prefix-in shen: "system-functions.rkt")
-         (for-syntax
-          data/gvector
-          racket
-          "syntax-utils.rkt"
-          syntax/parse
-          syntax/stx))
+         (prefix-in shen: "system-functions.rkt"))
 
 (provide add-prolog-predicate!
-         run-prolog-query!
-         (for-syntax expand-shen-defprolog
-                     expand-shen-prolog-query))
+         run-prolog-query!)
 
 (define (peek-for-prolog-warning)
   (when (eq? (peek-char scryer-prolog-in) #\%)
@@ -50,42 +42,3 @@
                (loop))
              fn-call)]
         [_ #f]))))
-
-(begin-for-syntax
-  (define (expand-shen-defprolog name rules)
-    (define-values (string-port write-prolog-goals received-vars-vec)
-      (prolog-syntax-writers #f))
-
-    (for-each (lambda (rule-stx)
-                (underscore-hyphen name string-port)
-                (syntax-parse rule-stx
-                  [(rule:shen-prolog-rule)
-                   (unless (stx-null? #'(rule.head-form ...))
-                     (write-string "(" string-port)
-                     (write-prolog-goals #'(rule.head-form ...) #f)
-                     (write-string ")" string-port))
-
-                   (unless (stx-null? #'(rule.body-form ...))
-                     (write-string " :- " string-port)
-                     (write-prolog-goals #'(rule.body-form ...) #t))
-
-                   (write-string ".\n" string-port)]))
-              (syntax->list rules))
-
-    (get-output-string string-port))
-
-  (define (expand-shen-prolog-query query)
-    (define-values (string-port write-prolog-goals received-vars-vec)
-      (prolog-syntax-writers #t))
-
-    (write-prolog-goals query #t)
-
-    (quasisyntax/loc query
-      (apply format
-             #,(get-output-string string-port)
-             (map
-              (lambda (shen-value)
-                (let ([port (open-output-string)])
-                  (write-as-prolog-datum shen-value port)
-                  (get-output-string port)))
-              (list #,@(gvector->list received-vars-vec)))))))

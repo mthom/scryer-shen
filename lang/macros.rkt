@@ -106,6 +106,8 @@
       (syntax/loc stx
         (defmacro defmacro-form.name
           (~@ defmacro-form.pat -> expanded-clause-expr) ...)))]
+    [((~datum defprolog) :id :shen-prolog-rule ...+)
+     (expand-shen-form- stx)]
     [((~literal cons) hd tl)
      (quasisyntax/loc stx
        (cons #,(expand-shen-form #'hd)
@@ -148,6 +150,8 @@
                     external-symbols
                     internal-symbols
                     expanded-form ...))))]
+    [((~datum prolog?) :prolog-body-pattern ...+)
+     (expand-shen-form- stx)]
     [body:expr
      #:when (stx-pair? #'body)
      (syntax-parse (expand-shen-form- #'body)
