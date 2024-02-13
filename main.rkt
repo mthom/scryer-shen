@@ -43,6 +43,10 @@
          cond
          if
          let
+         <>
+         @p
+         @s
+         @v
          /.
          define
          defmacro

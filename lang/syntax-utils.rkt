@@ -31,7 +31,8 @@
          shen-if-form
          shen-lambda-form
          shen-let-form
-         shen-prolog-rule)
+         shen-prolog-rule
+         unit-string)
 
 (define (capitalized-symbol? symbol)
   (and (symbol? symbol)
@@ -50,6 +51,11 @@
      #:when (not (capitalized-symbol? (syntax->datum #'id)))
      #''id]
     [_ pattern]))
+
+(define-syntax-class unit-string
+  (pattern str:string
+           #:fail-unless (= (string-length (syntax-e #'str)) 1)
+           "string literal patterns must consist of a single character"))
 
 (define-splicing-syntax-class shen-cond-form
   #:attributes ((condition 1)

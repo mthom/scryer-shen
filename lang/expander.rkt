@@ -5,6 +5,7 @@
          "namespaces.rkt"
          racket/stxparam
          "packages.rkt"
+         "pairs.rkt"
          "prolog.rkt"
          "systemf.rkt"
          syntax/parse/define
@@ -165,6 +166,55 @@
      #'(define-shen-function defun.name defun.wrapper)]
     [defun:id #''defun]))
 
+(define-match-expander @p
+  (syntax-parser
+    [((~literal @p) arg1 arg2 ... args)
+     #'(shen-tuple (vector arg1 arg2 ... args))])
+  (syntax-parser
+    [((~literal @p) arg1 arg2 ... args)
+     #'(shen-tuple (vector arg1 arg2 ... args))]))
+
+(define (@s-pattern num-chars)
+  (lambda (str)
+    (for/list ([ch (in-string str)]
+               [n  (in-range 0 (add1 num-chars))])
+      (if (= n num-chars)
+          (substring str num-chars)
+          (string ch)))))
+
+(define-match-expander @s
+  (syntax-parser
+    [((~literal @s) (~or arg:shen-var-id arg:unit-string) ...+
+                    (~or last-arg:shen-var-id last-arg:string))
+     #:with num-chars (length (syntax->list #'(arg ...)))
+     #'(? string?
+          ;; quote is needed here to compensate for lack of #%datum in
+          ;; the transformer phase
+          (app (@s-pattern (quote num-chars))
+               (list arg ... last-arg)))])
+  (syntax-parser
+    [((~literal @s) arg1 arg2 args ...+)
+     #'(string-append arg1 arg2 args ...)]))
+
+(define (@v-pattern num-elts)
+  (lambda (vec)
+    (vector-append (vector-take vec num-elts)
+                   (vector (vector-drop vec num-elts)))))
+
+(define-match-expander @v
+  (syntax-parser
+    [((~literal @v) arg ...+ (~literal <>))
+     #:with num-elts (length (syntax->list #'(arg ...)))
+     #'(vector arg ...)]
+    [((~literal @v) arg ...+ last-arg)
+     #:with num-elts (length (syntax->list #'(arg ...)))
+     #'(? vector?
+          (app (@v-pattern (quote num-elts))
+               (vector arg ... last-arg)))])
+  (syntax-parser
+    [((~literal @v) arg ...+ last-arg)
+     #'(vector-append (vector arg ...) last-arg)]))
+
 (define-syntax shen-lambda
   (syntax-parser
     [(shen-lambda lambda-form:shen-lambda-form)
@@ -200,7 +250,15 @@
   (syntax-case stx ()
     [_:id #'#f]))
 
-(provide (protect-out kl-defun
+(define-syntax <>
+  (syntax-parser
+    [_:id #'#()]))
+
+(provide (protect-out <>
+                      @p
+                      @s
+                      @v
+                      kl-defun
                       shen-curry-out
                       shen-function-out)
          (rename-out [shen-true true]

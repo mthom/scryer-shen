@@ -5,7 +5,8 @@
                   [foldr r:foldr]
                   [map r:map]
                   [eval r:eval]
-                  [load r:load])
+                  [load r:load]
+                  [vector r:vector])
          (only-in racket/exn
                   exn->string)
          (only-in "packages.rkt"
@@ -146,3 +147,6 @@
 
 (define (output fmt-string . args)
   (apply printf fmt-string args))
+
+(define (vector size)
+  (build-vector size (const '...)))

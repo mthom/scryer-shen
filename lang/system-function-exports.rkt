@@ -5,7 +5,8 @@
                     foldr
                     map
                     eval
-                    set)
+                    set
+                    vector)
          (only-in "expander.rkt"
                   shen-curry-out
                   shen-function-out)
@@ -28,7 +29,6 @@
                          [make-vector absvector #:arity 1]
                          [vector-ref <-address #:arity 2]
                          [vector-set! address-> #:arity 3]
-                         [cons #:arity 2]
                          [cons adjoin #:arity 2]
                          [append #:arity 2 #:polyadic #:right]
                          [map #:arity 2]
@@ -45,6 +45,7 @@
                             [vector? absvector?]
                             arity
                             bound?
+                            cons
                             cons?
                             empty?
                             error-to-string
@@ -58,7 +59,8 @@
                             symbol?
                             systemf
                             undefmacro
-                            value)
+                            value
+                            vector)
          (all-from-out "failure.rkt")
          destroy
          error

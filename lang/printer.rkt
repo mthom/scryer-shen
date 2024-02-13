@@ -1,6 +1,7 @@
 #lang racket
 
-(require racket/base
+(require "pairs.rkt"
+         racket/base
          racket/generator
          racket/match)
 
@@ -41,6 +42,20 @@
      (write-string (if datum "true" "false") port)]
     [(? void?)
      (write-string "[]" port)]
+    [(? shen-tuple?)
+     (write-string "(@p" port)
+     (for ([elt (in-vector (shen-tuple-args datum))])
+       (write-string " " port)
+       (shen-printer elt port))
+     (write-string ")" port)]
+    [(? vector?)
+     (write-string "<" port)
+     (unless (vector-empty? datum)
+       (shen-printer (vector-ref datum 0) port)
+       (for ([elt (in-vector datum 1)])
+         (write-string " " port)
+         (shen-printer elt port)))
+     (write-string ">" port)]
     [#\|
      (write-string "bar!" port)]
     [_

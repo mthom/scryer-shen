@@ -25,7 +25,7 @@ those found in programming languages like Agda and Lean.
 - [x] Add `defmacro` and `package`
 - [x] Add `defprolog` and `prolog?`
 - [x] Add `if` and `cond` forms
-- [ ] Add `@v`, `@p` and `@s` constructors/patterns
+- [x] Add `@v`, `@p` and `@s` constructors/patterns
 - [ ] Add `freeze` and `thaw`
 - [ ] Add `deftype` and support for type signatures in functions
 - [ ] Use `raco` and Racket's `compiler` API to automatically download, 
