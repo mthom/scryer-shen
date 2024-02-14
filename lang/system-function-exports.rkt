@@ -58,10 +58,12 @@
                             output
                             symbol?
                             systemf
+                            thaw
                             undefmacro
                             value
                             vector)
          (all-from-out "failure.rkt")
          destroy
          error
+         freeze
          set)

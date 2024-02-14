@@ -19,6 +19,7 @@
          (only-in "reader.rkt"
                   [read-syntax shen:read-syntax])
          (for-syntax syntax/parse)
+         syntax/parse/define
          syntax/strip-context)
 
 (provide (all-defined-out))
@@ -150,3 +151,8 @@
 
 (define (vector size)
   (build-vector size (const '...)))
+
+(define-syntax-parse-rule (freeze stx:expr)
+  (thunk stx))
+
+(define (thaw f) (f))
