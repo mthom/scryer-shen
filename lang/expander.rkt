@@ -18,7 +18,8 @@
                      racket/syntax
                      syntax/parse
                      syntax/stx
-                     "syntax-utils.rkt"))
+                     "syntax-utils.rkt"
+                     "types-syntax.rkt"))
 
 (begin-for-syntax
   (define (generate-variadic-macro-or-wrapper renamed-id assoc wrapper-id
@@ -227,8 +228,7 @@
     [(shen-let let-form:shen-let-form)
      #'(let* ([let-form.binding-id let-form.binding-expr]
               ...)
-         let-form.body-expr
-         ...)]))
+         let-form.body-expr)]))
 
 (define-syntax shen-cond
   (syntax-parser
@@ -236,6 +236,18 @@
      #'(cond [cond-form.condition cond-form.true-form]
              ...
              [else #f])]))
+
+(define-syntax shen-datatype
+  (syntax-parser
+    [(shen-datatype type-module-name:id sequent:shen-type-sequent ...+)
+     #:do [(printf "prolog-forms: ~a~n~n"
+                   (syntax->datum #'(sequent.prolog-form ... ...)))
+           (stx-map (lambda (stx)
+                      (syntax-parse stx
+                        [((~datum defprolog) rule-name:id rule:shen-prolog-rule ...+)
+                         (printf "~a" (expand-shen-defprolog #'rule-name #'(rule ...)))]))
+                    #'(sequent.prolog-form ... ...))]
+     #'(begin)]))
 
 (define-syntax shen-if
   (syntax-parser
@@ -263,6 +275,7 @@
                       shen-function-out)
          (rename-out [shen-true true]
                      [shen-false false]
+                     [shen-datatype datatype]
                      [shen-define define]
                      [shen-cond cond]
                      [shen-if if]

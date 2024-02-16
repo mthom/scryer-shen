@@ -20,7 +20,7 @@
          prolog-body-pattern
          quote-pattern
          shen-binding
-         shen-var-id
+         shen-cons-syntax
          shen-curry-out-export
          shen-function-out-export
          shen-define
@@ -32,6 +32,8 @@
          shen-lambda-form
          shen-let-form
          shen-prolog-rule
+         shen-prolog-term
+         shen-var-id
          unit-string)
 
 (define (capitalized-symbol? symbol)
@@ -57,6 +59,50 @@
            #:fail-unless (= (string-length (syntax-e #'str)) 1)
            "string literal patterns must consist of a single character"))
 
+(define syntax->shen-prolog-term
+  (syntax-parser
+    [term:shen-prolog-term
+     #'term.term]))
+
+(define shen-cons-syntax
+  (syntax-parser
+    [(a . d)
+     #`(cons a #,(shen-cons-syntax #'d))]
+    [stx
+     #'stx]))
+
+(define-splicing-syntax-class shen-function-type-sig
+  #:attributes ((type 1))
+  #:datum-literals (-->)
+  (pattern (~seq t1:shen-prolog-term (~seq --> t2:shen-prolog-term) ...+)
+           #:with (type ...) #'(t1.term t2.term ...))
+  (pattern (~seq --> t:shen-prolog-term)
+           #:with (type ...) #'(t.term)))
+
+(define-syntax-class shen-prolog-term
+  #:attributes (term)
+  (pattern ((~and id:id (~or (~datum @p)
+                             (~datum @s)
+                             (~datum @v)))
+            arg args ...+)
+           #:with term (if (null? (stx-cdr #'(args ...)))
+                           #'(#%prolog-functor id arg args ...)
+                           #`(#%prolog-functor id arg #,(syntax->shen-prolog-term #'(id args ...)))))
+  (pattern ((~datum cons) a:shen-prolog-term d:shen-prolog-term)
+           #:with term #'(cons a.term d.term))
+  (pattern ((~datum #%prolog-functor) id:id arg:shen-prolog-term ...+)
+           #:with term #'(#%prolog-functor id arg.term ...))
+  (pattern (type-sig:shen-function-type-sig)
+           #:with term #'(#%prolog-functor --> type-sig.type ...))
+  (pattern ((~and a:id (~not :shen-var-id)) d:shen-prolog-term ...+)
+           #:with term #'(#%prolog-functor a d.term ...))
+  (pattern (f:shen-prolog-term arg:shen-prolog-term ...)
+           #:with term #`(#%prolog-functor apply f.term #,(shen-cons-syntax #'(arg.term ...))))
+  (pattern str:string
+           #:with term #'(#%shen-string str))
+  (pattern datum
+           #:with term #'datum))
+
 (define-splicing-syntax-class shen-cond-form
   #:attributes ((condition 1)
                 (true-form 1))
@@ -71,8 +117,8 @@
 (define-splicing-syntax-class shen-let-form
   #:attributes ((binding-id 1)
                 (binding-expr 1)
-                (body-expr 1))
-  (pattern (~seq binding:shen-binding ...+ body-expr:expr ...+)
+                body-expr)
+  (pattern (~seq binding:shen-binding ...+ body-expr:expr)
            #:with (binding-id ...)   #'(binding.id ...)
            #:with (binding-expr ...) #'(binding.expr ...)))
 
@@ -123,12 +169,24 @@
   (pattern (~seq id:shen-var-id expr:expr)))
 
 (define-splicing-syntax-class function-clause-definition
-  #:attributes ((pats 1) arrow body guard match-clause)
+  #:attributes ((pats 1)
+                arrow
+                body
+                guard
+                match-clause
+                shen-prolog-body
+                shen-prolog-guard
+                (shen-prolog-pats 1))
   #:datum-literals (-> <- where)
   (pattern (~seq pats:function-clause-pattern ... -> body:expr
                  (~optional (~seq where guard:expr)))
            #:with arrow #'->
-           #:with match-clause #'[(pats.pat ...) (~? (~@ . (#:when guard))) body])
+           #:with match-clause #'[(pats.pat ...) (~? (~@ . (#:when guard))) body]
+           #:with shen-prolog-body (syntax->shen-prolog-term #'body)
+           #:with shen-prolog-guard (if (attribute guard)
+                                        (syntax->shen-prolog-term #'guard)
+                                        #'())
+           #:with (shen-prolog-pats ...) (stx-map syntax->shen-prolog-term #'(pats.pat ...)))
   (pattern (~seq pats:function-clause-pattern ... <- body:expr
                  (~optional (~seq where guard:expr)))
            #:with arrow #'<-
@@ -150,7 +208,12 @@
                                                                         (if (fail-fn result)
                                                                             (backtrack-fn)
                                                                             result)))])])
-                                    body)]))
+                                    body)]
+           #:with shen-prolog-body (syntax->shen-prolog-term #'body)
+           #:with shen-prolog-guard (if (attribute guard)
+                                        (syntax->shen-prolog-term #'guard)
+                                        #'())
+           #:with (shen-prolog-pats ...) (stx-map syntax->shen-prolog-term #'(pats.pat ...))))
 
 (define-splicing-syntax-class shen-define
   #:attributes (name (clause 1) wrapper)

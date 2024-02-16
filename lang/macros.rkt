@@ -114,13 +114,12 @@
              #,(expand-shen-form #'tl)))]
     [((~datum let) let-form:shen-let-form)
      #:with (expanded-b-expr ...) (stx-map expand-shen-form #'(let-form.binding-expr ...))
-     #:with (expanded-body-expr ...) (stx-map expand-shen-form #'(let-form.body-expr ...))
+     #:with expanded-body-expr (expand-shen-form #'let-form.body-expr)
      (expand-shen-form-
       (syntax/loc stx
         (let (~@ . [let-form.binding-id expanded-b-expr])
              ...
-             expanded-body-expr
-             ...)))]
+             expanded-body-expr)))]
     [((~datum /.) lambda-form:shen-lambda-form)
      #:with (expanded-body-expr ...) (stx-map expand-shen-form #'(lambda-form.body-expr ...))
      (expand-shen-form-

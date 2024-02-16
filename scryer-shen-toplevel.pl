@@ -5,7 +5,8 @@
 :- use_module(library(error)).
 :- use_module(library(iso_ext)).
 :- use_module(library(lists)).
-:- use_module(library('$scryer-prolog-server')).
+
+:- use_module('scryer-prolog-server').
 
 repl :-
     catch(read_and_match, E, print_exception(E)),

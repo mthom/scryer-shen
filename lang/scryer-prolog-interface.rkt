@@ -11,11 +11,10 @@
          scryer-prolog-out)
 
 (define-runtime-path scryer-prolog-path   "../dist/bin/scryer-prolog")
-(define-runtime-path scryer-prolog-server "../scryer-prolog-server.pl")
 (define-runtime-path scryer-shen-toplevel "../scryer-shen-toplevel.pl")
 
 (define-values (scryer-prolog-process in out err)
-  (subprocess #f #f #f scryer-prolog-path "-f" scryer-prolog-server scryer-shen-toplevel))
+  (subprocess #f #f #f scryer-prolog-path "-f" scryer-shen-toplevel))
 
 (struct multiplexed-input-port [name wrapped-in child-outs]
   #:property prop:input-port (struct-field-index wrapped-in))

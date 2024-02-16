@@ -31,7 +31,7 @@
 
   (define (detect-prolog-syntax stx)
     (syntax-parse stx
-      [((~and id (~or (~datum defprolog) (~datum prolog?))) . body)
+      [((~and id (~or (~datum defprolog) (~datum prolog?) (~datum datatype))) . body)
        (quasisyntax/loc stx
          (id . #,(tag-prolog-functors #'body)))]
       [(a . d)

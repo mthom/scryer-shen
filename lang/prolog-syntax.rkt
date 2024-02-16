@@ -13,10 +13,15 @@
 (define (shen-atom->prolog-atom atom)
   (let* ([underlying-str (symbol->string atom)])
     (define unhyphenated-atom
-      (if (equal? underlying-str "-")
-          "-"
-          (string-replace underlying-str "-" "_")))
-    (if (memf (lambda (ch) (or (eq? ch #\?) (eq? ch #\@)))
+      (case underlying-str
+        [("-" "->" "-->")
+         underlying-str]
+        [else
+         (string-replace underlying-str "-" "_")]))
+    (if (memf (lambda (ch)
+                (case ch
+                  [(#\? #\@) #t]
+                  [else #f]))
               (string->list unhyphenated-atom))
         (string-append "'" unhyphenated-atom "'")
         unhyphenated-atom)))
@@ -39,7 +44,7 @@
       [(? symbol?)
        (write-string (shen-atom->prolog-atom datum) port)]
       [(? string?)
-       (fprintf port "\"~s\"" datum)]
+       (fprintf port "~s" datum)]
       [(== #t eq?)
        (fprintf port "true")]
       [(== #f eq?)
@@ -155,7 +160,7 @@
                                     (let ([t (shift-args #'t)])
                                       (write-prolog-datum t)
                                       (write-string " = true" string-port))]
-                                   [((~literal #%prolog-functor) id:id . args)
+                                   [((~datum #%prolog-functor) id:id . args)
                                     (let ([args (stx-map shift-args #'args)])
                                       (write-string (shen-atom->prolog-atom (syntax->datum #'id)) string-port)
                                       (write-string "(" string-port)

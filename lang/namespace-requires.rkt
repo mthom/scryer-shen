@@ -21,5 +21,6 @@
 (namespace-require module-path-to-system-function-exports shen-namespace)
 (namespace-require `(for-space function ,module-path-to-system-function-exports) shen-namespace)
 (namespace-require `(rename ,module-path-to-expander defun kl-defun) shen-namespace)
-(namespace-require `(only ,module-path-to-expander <> @p @s @v /. cond define defmacro defprolog false if let package prolog? true)
+(namespace-require `(only ,module-path-to-expander <> @p @s @v /. cond datatype define defmacro
+                          defprolog false if let package prolog? true)
                    shen-namespace)
