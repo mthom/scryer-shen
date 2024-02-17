@@ -193,8 +193,8 @@
           (app (@s-pattern (quote num-chars))
                (list arg ... last-arg)))])
   (syntax-parser
-    [((~literal @s) arg1 arg2 args ...+)
-     #'(string-append arg1 arg2 args ...)]))
+    [((~literal @s) arg1 args ...+)
+     #'(string-append arg1 args ...)]))
 
 (define (@v-pattern num-elts)
   (lambda (vec)
