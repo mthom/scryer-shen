@@ -1,17 +1,16 @@
 
 # Scryer Shen
 
-An experimental, in-progress implementation of the Shen programming
-language in Racket and [Scryer Prolog](https://github.com/mthom/scryer-prolog).
+An experimental, in-progress implementation of the [Shen programming
+language](https://www.shenlanguage.org) in Racket and [Scryer Prolog](https://github.com/mthom/scryer-prolog).
 
 Unlike most other implementations of Shen, scryer-shen implements Shen
 directly in its host languages without bootstrapping from a seed
 implementation of KLambda. 
 
-The intention is to allow direct integration of [Scryer
-Prolog](http://github.com/mthom/scryer-prolog) inside a Shen
-implementation. Scryer Prolog is a performant ISO Prolog system with
-powerful metaprogramming capabilities and highly general and
+The intention is to allow direct integration of Scryer Prolog inside a
+Shen implementation. Scryer Prolog is a performant ISO Prolog system
+with powerful metaprogramming capabilities and highly general and
 expressive constraint logic programming libraries over integers and
 booleans among many other features.
 
