@@ -22,10 +22,11 @@
          shen-binding
          shen-cons-syntax
          shen-curry-out-export
-         shen-function-out-export
          shen-define
          shen-defmacro
          shen-internal-package
+         shen-function-out-export
+         shen-function-type-sig
          shen-package
          shen-cond-form
          shen-if-form
@@ -33,6 +34,7 @@
          shen-let-form
          shen-prolog-rule
          shen-prolog-term
+         shen-special-form?
          shen-var-id
          unit-string)
 
@@ -54,14 +56,21 @@
      #''id]
     [_ pattern]))
 
+(define-literal-set shen-special-forms
+  #:datum-literals (true false let cons if /. cond fn @p @s @v)
+  ())
+
+(define shen-special-form?
+  (literal-set->predicate shen-special-forms))
+
 (define-syntax-class unit-string
   (pattern str:string
            #:fail-unless (= (string-length (syntax-e #'str)) 1)
            "string literal patterns must consist of a single character"))
 
-(define syntax->shen-prolog-term
-  (syntax-parser
-    [term:shen-prolog-term
+(define (syntax->shen-prolog-term stx [type-datum? #f] [untagged-vars? #f])
+  (syntax-parse stx
+    [(~var term (shen-prolog-term #:type-datum type-datum? #:untagged-vars untagged-vars?))
      #'term.term]))
 
 (define shen-cons-syntax
@@ -79,27 +88,65 @@
   (pattern (~seq --> t:shen-prolog-term)
            #:with (type ...) #'(t.term)))
 
-(define-syntax-class shen-prolog-term
+(define (wrap-tagged-shen-prolog-term datum-term)
+  (define wrapper (syntax-parse-state-ref (syntax->datum datum-term) #f))
+  (if (procedure? wrapper)
+      (wrapper datum-term)
+      datum-term))
+
+(define-syntax-class (shen-prolog-term #:type-datum [type-datum? #f]
+                                       #:untagged-vars [untagged-vars? #t])
   #:attributes (term)
+  (pattern str:string
+           #:with term #'(#%prolog-functor string str))
+  (pattern num:number
+           #:with term #'(#%prolog-functor number num))
+  (pattern sym:shen-var-id
+           #:with term (let ([term (if untagged-vars?
+                                       #'sym
+                                       #`(#%prolog-functor #,(if type-datum? #'symbol #'?) sym))])
+                         (wrap-tagged-shen-prolog-term term)))
+  (pattern (~and sym:id (~not :shen-var-id))
+           #:fail-when (or (shen-special-form? #'sym)
+                           (syntax-parse #'sym
+                             [(~or (~literal #%prolog-functor)
+                                   (~literal apply))
+                              #t]
+                             [_ #f]))
+           #f
+           #:with term #'(#%prolog-functor symbol sym))
   (pattern ((~and id:id (~or (~datum @p)
                              (~datum @s)
                              (~datum @v)))
             arg args ...+)
            #:with term (if (null? (stx-cdr #'(args ...)))
                            #'(#%prolog-functor id arg args ...)
-                           #`(#%prolog-functor id arg #,(syntax->shen-prolog-term #'(id args ...)))))
-  (pattern ((~datum cons) a:shen-prolog-term d:shen-prolog-term)
+                           #`(#%prolog-functor id arg #,(syntax->shen-prolog-term
+                                                         #'(id args ...)
+                                                         type-datum?
+                                                         untagged-vars?))))
+  ;; TODO: let, if, /., cond, apply
+  ;; strip off quote installed by quote-patterns etc.
+  (pattern ((~datum quote)
+            (~var x (shen-prolog-term #:type-datum type-datum? #:untagged-vars untagged-vars?)))
+           #:with term #'x.term)
+  (pattern ((~datum cons)
+            (~var a (shen-prolog-term #:type-datum type-datum? #:untagged-vars untagged-vars?))
+            (~var d (shen-prolog-term #:type-datum type-datum? #:untagged-vars untagged-vars?)))
            #:with term #'(cons a.term d.term))
-  (pattern ((~datum #%prolog-functor) id:id arg:shen-prolog-term ...+)
+  (pattern ((~datum #%prolog-functor)
+            id:id
+            (~var arg (shen-prolog-term #:type-datum type-datum? #:untagged-vars untagged-vars?)) ...+)
            #:with term #'(#%prolog-functor id arg.term ...))
   (pattern (type-sig:shen-function-type-sig)
            #:with term #'(#%prolog-functor --> type-sig.type ...))
-  (pattern ((~and a:id (~not :shen-var-id)) d:shen-prolog-term ...+)
+  (pattern ((~and a:id (~not :shen-var-id))
+            (~var d (shen-prolog-term #:type-datum type-datum? #:untagged-vars untagged-vars?)) ...+)
            #:with term #'(#%prolog-functor a d.term ...))
-  (pattern (f:shen-prolog-term arg:shen-prolog-term ...)
+  (pattern ((~var f   (shen-prolog-term #:type-datum type-datum? #:untagged-vars untagged-vars?))
+            (~var arg (shen-prolog-term #:type-datum type-datum? #:untagged-vars untagged-vars?))
+            ...)
            #:with term #`(#%prolog-functor apply f.term #,(shen-cons-syntax #'(arg.term ...))))
-  (pattern str:string
-           #:with term #'(#%shen-string str))
   (pattern datum
            #:with term #'datum))
 
@@ -112,7 +159,9 @@
   (pattern (~seq condition:expr true-form:expr false-form:expr)))
 
 (define-splicing-syntax-class shen-lambda-form
-  (pattern (~seq var:shen-var-id ... body-expr:expr ...+)))
+  (pattern (~seq var:shen-var-id ... body-expr:expr ...+)
+           #:do [(stx-map (lambda (stx) (syntax-property stx 'bound #t))
+                          #'(var ...))]))
 
 (define-splicing-syntax-class shen-let-form
   #:attributes ((binding-id 1)
@@ -166,7 +215,8 @@
 
 (define-splicing-syntax-class shen-binding
   #:attributes (id expr)
-  (pattern (~seq id:shen-var-id expr:expr)))
+  (pattern (~seq id:shen-var-id expr:expr)
+           #:do [(syntax-property #'id 'bound #t)]))
 
 (define-splicing-syntax-class function-clause-definition
   #:attributes ((pats 1)
@@ -176,17 +226,17 @@
                 match-clause
                 shen-prolog-body
                 shen-prolog-guard
-                (shen-prolog-pats 1))
+                (shen-prolog-pat 1))
   #:datum-literals (-> <- where)
   (pattern (~seq pats:function-clause-pattern ... -> body:expr
                  (~optional (~seq where guard:expr)))
            #:with arrow #'->
            #:with match-clause #'[(pats.pat ...) (~? (~@ . (#:when guard))) body]
-           #:with shen-prolog-body (syntax->shen-prolog-term #'body)
+           #:with shen-prolog-body  (syntax->shen-prolog-term #'body)
            #:with shen-prolog-guard (if (attribute guard)
                                         (syntax->shen-prolog-term #'guard)
-                                        #'())
-           #:with (shen-prolog-pats ...) (stx-map syntax->shen-prolog-term #'(pats.pat ...)))
+                                        #'#t)
+           #:with (shen-prolog-pat ...) (stx-map syntax->shen-prolog-term #'(pats.pat ...)))
   (pattern (~seq pats:function-clause-pattern ... <- body:expr
                  (~optional (~seq where guard:expr)))
            #:with arrow #'<-
@@ -209,18 +259,28 @@
                                                                             (backtrack-fn)
                                                                             result)))])])
                                     body)]
-           #:with shen-prolog-body (syntax->shen-prolog-term #'body)
+           #:with shen-prolog-body  (syntax->shen-prolog-term #'body)
            #:with shen-prolog-guard (if (attribute guard)
                                         (syntax->shen-prolog-term #'guard)
-                                        #'())
-           #:with (shen-prolog-pats ...) (stx-map syntax->shen-prolog-term #'(pats.pat ...))))
+                                        #'#t)
+           #:with (shen-prolog-pat ...) (stx-map syntax->shen-prolog-term #'(pats.pat ...))))
 
+;; the cut in shen-define ensures a syntax error is raised if the
+;; second #:fail-unless condition isn't met.
 (define-splicing-syntax-class shen-define
-  #:attributes (name (clause 1) wrapper)
-  (pattern (~seq name:id clause:function-clause-definition ...+)
+  #:attributes (name (clause 1) (type 1) type-sig wrapper)
+  #:datum-literals (|{| |}|)
+  (pattern (~seq
+             name:id (~optional (~seq |{| type-sig:shen-function-type-sig |}| ~!))
+             clause:function-clause-definition ...+)
            #:fail-unless (apply = (map length (attribute clause.pats)))
            "each clause must contain the same number of patterns"
-           #:with pats (attribute clause.pats)
+           #:fail-unless (if (attribute type-sig.type)
+                             (= (length (first  (attribute clause.pats)))
+                                (sub1   (length (attribute type-sig.type))))
+                             #t)
+           "the number of argument types must match the number of clause arguments"
+           #:with (type ...) #'((~? (~@ type-sig.type ...) ()))
            #:with (arg-id ...) (stx-map
                                 (lambda (stx) (syntax-property stx 'bound #t))
                                 (generate-temporaries (car (attribute clause.pats))))

@@ -3,8 +3,10 @@
 (compile-allow-set!-undefined #t)
 (compile-enforce-module-constants #f)
 
-(require shen/lang/expander shen/lang/interposition-points
-         shen/lang/namespaces shen/lang/reader
+(require shen/lang/expander
+         shen/lang/interposition-points
+         shen/lang/namespaces
+         shen/lang/reader
          shen/lang/system-function-exports)
 
 (namespace-require '(rename shen/lang/interposition-points #%app app) kl-namespace)

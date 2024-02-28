@@ -67,4 +67,5 @@
          destroy
          error
          freeze
-         set)
+         set
+         tc)

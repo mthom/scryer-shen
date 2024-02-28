@@ -16,6 +16,7 @@
                   shen-readtable)
          (only-in shen/lang/system-functions
                   [eval shen:eval])
+         shen/lang/type-check
          (only-in racket/exn
                   exn->string))
 
@@ -31,8 +32,7 @@
                       [exn? (lambda (e)
                               (printf "error: ~a~n" (exn->string e))
                               (loop))])
-        (printf "(~a-) " prompt-num)
-
+        (printf "(~a~a) " prompt-num (if (type-check?) '+ '-))
         (set! prompt-num (add1 prompt-num))
 
         (shen-printer

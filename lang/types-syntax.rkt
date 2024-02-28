@@ -17,16 +17,52 @@
                                        (symbol->string (syntax-e this-syntax)))
            #f))
 
+(define (tag-functor-syntax! stx functor-tag)
+  (let ([datum (syntax->datum stx)])
+    (syntax-parse-state-set! datum (lambda (stx) #`(#%prolog-functor #,functor-tag #,stx)))
+    (syntax-parse-state-cons! 'tagged-type-data datum empty)))
+
+(define (reset-tagged-syntax-parse-state!)
+  (for ([key (in-list (syntax-parse-state-ref 'tagged-type-data empty))])
+    (syntax-parse-state-set! key #f))
+  (syntax-parse-state-set! 'tagged-type-data empty))
+
+(define-splicing-syntax-class shen-type-declaration
+  #:attributes (datum type)
+  (pattern (~seq (~var num (shen-prolog-term #:type-datum #t))
+                 (~literal :)
+                 (~literal number))
+           #:do [(tag-functor-syntax! #'num #'number)]
+           #:with datum #'(#%prolog-functor number num.term)
+           #:with type  #'number)
+  (pattern (~seq (~var str (shen-prolog-term #:type-datum #t))
+                 (~literal :)
+                 (~literal string))
+           #:do [(tag-functor-syntax! #'str #'string)]
+           #:with datum #'(#%prolog-functor string str.term)
+           #:with type  #'string)
+  (pattern (~seq (~var sym (shen-prolog-term #:type-datum #t))
+                 (~literal :)
+                 (~literal symbol))
+           #:do [(tag-functor-syntax! #'sym #'symbol)]
+           #:with datum #'(#%prolog-functor symbol sym.term)
+           #:with type  #'symbol)
+  (pattern (~seq (~var datum-term (shen-prolog-term #:type-datum #t))
+                 (~literal :)
+                 type-term:shen-prolog-term)
+           #:with datum #'datum-term.term
+           #:with type  #'type-term.term))
+
 (define-splicing-syntax-class shen-sequent-assertion
   #:attributes (assumption head-args shen-prolog-term)
-  (pattern (~seq datum:shen-prolog-term (~literal :) type:shen-prolog-term)
-           #:with assumption #'(#%prolog-functor : datum.term type.term)
-           #:with head-args #'(datum.term type.term Hyps)
-           #:with shen-prolog-term #'(shen:type-check datum.term type.term Hyps))
+  (pattern (~seq type-decl:shen-type-declaration)
+           #:with assumption #'(#%prolog-functor type-check type-decl.datum type-decl.type)
+           #:with head-args #'(type-decl.datum type-decl.type)
+           #:with shen-prolog-term #'(#%prolog-functor type-check type-decl.datum type-decl.type))
   (pattern (~seq goal:shen-prolog-term)
            #:with assumption #'goal.term
            #:with head-args #'(goal.term)
-           #:with shen-prolog-term #'(goal.term)))
+           #:with shen-prolog-term #'(#%prolog-functor g (#%prolog-functor : user goal.term))))
 
 (define-splicing-syntax-class shen-sequent-assertion-list
   #:attributes ((assumption 1) (shen-prolog-term 1))
@@ -36,19 +72,13 @@
            #:with (assumption ...) #'(first.assumption rest.assumption ...)
            #:with (shen-prolog-term ...) #'(first.shen-prolog-term rest.shen-prolog-term ...)))
 
-(define-splicing-syntax-class shen-sequent-implicative
-  #:attributes ((head-arg 1) shen-prolog-term)
-  (pattern (~seq assertions:shen-sequent-assertion-list (~literal >>) conq:shen-sequent-assertion)
-           #:with (head-arg ...)   #'(assertions.assumption ...)
-           #:with shen-prolog-term #`(>> #,(shen-cons-syntax #'(assertions.assumption ...))
-                                         conq.assumption)))
-
 (define-splicing-syntax-class shen-sequent-condition
   #:attributes (implicative shen-prolog-terms)
   (pattern (~seq (~datum if) condition:expr)
            #:with implicative #'()
            #:with shen-prolog-terms #'((when condition)))
   (pattern (~seq (~datum let) id:shen-var-id datum:expr)
+           #:do [(syntax-property #'id 'bound #t)]
            #:with implicative #'()
            #:with shen-prolog-terms #'((is! id datum)))
   (pattern (~seq assertions:shen-sequent-assertion-list (~literal |;|))
@@ -58,15 +88,23 @@
            #:with implicative #'(implies.head-arg ...)
            #:with shen-prolog-terms #'(implies.shen-prolog-term)))
 
+(define-splicing-syntax-class shen-sequent-implicative
+  #:attributes (conq (head-arg 1) shen-prolog-term)
+  (pattern (~seq assertions:shen-sequent-assertion-list (~literal >>) p:shen-sequent-assertion)
+           #:with conq             #'p.assumption
+           #:with (head-arg ...)   #'(assertions.assumption ...)
+           #:with shen-prolog-term #`(>> #,(shen-cons-syntax #'(assertions.assumption ...))
+                                         p.assumption)))
+
 ;; The consequent is the head of a type sequent being generated.
 (define-splicing-syntax-class shen-sequent-consequent
-  #:attributes ((head-arg 1) predicate-name shen-prolog-term)
+  #:attributes (assumptions predicate-name shen-prolog-term)
   (pattern (~seq assertion:shen-sequent-assertion)
-           #:with (head-arg ...)   #'assertion.head-args
+           #:with assumptions      #'assertion.head-args
            #:with predicate-name   #'type-check
            #:with shen-prolog-term #'assertion.shen-prolog-term)
   (pattern (~seq implies:shen-sequent-implicative)
-           #:with (head-arg ...)   #'(implies.head-arg ...)
+           #:with assumptions      #`(#,(shen-cons-syntax #'(implies.head-arg ...)) implies.conq)
            #:with predicate-name   #'>>
            #:with shen-prolog-term #'implies.shen-prolog-term))
 
@@ -76,15 +114,15 @@
                  :shen-single-line-bar
                  conq:shen-sequent-consequent
                  (~literal |;|))
-           #:with assumptions (if (free-identifier=? #'conq.predicate-name #'type-check)
-                                  #'(conq.head-arg ...)
-                                  #`(#,(shen-cons-syntax #'(conq.head-arg ...)) P))
+           #:do [(reset-tagged-syntax-parse-state!)]
            #:with (prolog-form ...) #'((defprolog conq.predicate-name
-                                         (~@ . assumptions) <-- (~@ . cond.shen-prolog-terms) ... |;|)))
+                                         (~@ . conq.assumptions) <--
+                                         (~@ . cond.shen-prolog-terms) ... |;|)))
   (pattern (~seq cond:shen-sequent-condition ...
                  :shen-multi-line-bar
                  conq:shen-sequent-assertion
                  (~literal |;|))
+           #:do [(reset-tagged-syntax-parse-state!)]
            #:with conq-list (shen-cons-syntax #'(conq.assumption))
            #:with impl-list (shen-cons-syntax #'((~@ . cond.implicative) ...))
            #:with (prolog-form ...) #'((defprolog type-check

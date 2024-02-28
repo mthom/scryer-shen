@@ -7,8 +7,8 @@
          "packages.rkt"
          "pairs.rkt"
          "prolog.rkt"
-         "systemf.rkt"
          syntax/parse/define
+         "systemf.rkt"
          (for-syntax "prolog-syntax.rkt"
                      racket/base
                      racket/function
@@ -34,7 +34,7 @@
                            [(_ a) #'(wrapper-id a)]
                            [(_ a b) #'(wrapper-id a b)]
                            [(_ a b . cs) #'(wrapper-id a (new-id b . cs))]
-                           [_:id #'renamed-id]))))
+                           [_:id #''renamed-id]))))
                  new-id]
       [(#:left) (with-syntax ([wrapper-id wrapper-id]
                               [new-id new-id]
@@ -45,9 +45,41 @@
                            [(_ a) #'(wrapper-id a)]
                            [(_ a b) #'(wrapper-id a b)]
                            [(_ a b . cs) #'(wrapper-id a (new-id b . cs))]
-                           [_:id #'renamed-id]))))
+                           [_:id #''renamed-id]))))
                 new-id]
-      [else wrapper-id])))
+      [else wrapper-id]))
+
+  (define (type-check-queries type-sig clauses)
+    (define (pattern-hyps pat-types pats clause-guard)
+      (with-syntax ([(pat ...) pats]
+                    [(pat-type ...) pat-types]
+                    [clause-guard clause-guard])
+        (shen-cons-syntax #`((#%prolog-functor type-check pat pat-type)
+                             ...
+                             #,@(if (eq? (syntax->datum #'clause-guard) #t)
+                                    #'()
+                                    #'((#%prolog-functor type-check clause-guard verified)))))))
+
+    (syntax-parse type-sig
+      [(type-sig:shen-function-type-sig)
+       (with-syntax* ([(pat-type ... clause-type) #'(type-sig.type ...)]
+                      [(((pat-form ...) ...)
+                        (clause-body ...)
+                        (clause-guard ...))
+                       (syntax-parse clauses
+                         [((clause:function-clause-definition) ...+)
+                          #`(((clause.shen-prolog-pat ...) ...)
+                             (clause.shen-prolog-body ...)
+                             (clause.shen-prolog-guard ...))])]
+                      [(pattern-hyp ...) (stx-map
+                                          (curry pattern-hyps #'(pat-type ...))
+                                          #'((pat-form ...) ...)
+                                          #'(clause-guard ...))])
+         #'((#%prolog-functor : shen
+                              (#%prolog-functor start-proof pattern-hyp
+                                                (#%prolog-functor type-check clause-body clause-type)
+                                                _))
+            ...))])))
 
 (define-syntax define-shen-function
   (syntax-parser
@@ -107,9 +139,9 @@
    (lambda (stx modes)
      (syntax-parse stx
        [(_ f:shen-function-out-export ...)
-        #:do [(stx-map
+        #:do [[stx-map
                syntax-local-lift-module-end-declaration
-               #'((define-shen-function f.renamed-id f.func-id) ...))
+               #'((define-shen-function f.renamed-id f.func-id) ...)]
               (stx-map
                syntax-local-lift-expression
                #'((systemf 'f.renamed-id) ...))]
@@ -120,8 +152,17 @@
 (define-syntax shen-define
   (syntax-parser
     [(shen-define define-form:shen-define)
+     #:when (attribute define-form.type-sig)
+     #:cut
+     #:with type-check-queries
+     (expand-shen-prolog-query
+      (type-check-queries #'define-form.type-sig #'(define-form.clause ...)))
+     #'(begin
+         (printf "~s~n" 'type-check-queries)
+         (define-shen-function define-form.name define-form.wrapper))]
+    [(shen-define define-form:shen-define)
      #'(define-shen-function define-form.name define-form.wrapper)]
-    [shen-define:id #''shen-define]))
+    [shen-define:id #''define]))
 
 (define-syntax shen-defmacro
   (syntax-parser

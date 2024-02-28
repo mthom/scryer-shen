@@ -20,7 +20,7 @@
          (string-replace underlying-str "-" "_")]))
     (if (memf (lambda (ch)
                 (case ch
-                  [(#\? #\@) #t]
+                  [(#\, #\; #\? #\@) #t]
                   [else #f]))
               (string->list unhyphenated-atom))
         (string-append "'" unhyphenated-atom "'")
@@ -99,6 +99,14 @@
                                     (write-string "use_module('" string-port)
                                     (write (syntax->datum #'file-name) string-port)
                                     (write-string "')" string-port)]
+                                   [((~and slash-op (~or (~literal |\+|) (~literal |\=|) (~literal |\==|)))
+                                     term)
+                                    #:when top-level?
+                                    ;; support ISO Prolog functors for negation as failure, not unifiable, not equal
+                                    (write-string (symbol->string (syntax-e #'slash-op)) string-port)
+                                    (write-string "(" string-port)
+                                    (write-prolog-datum (shift-args #'term))
+                                    (write-string ")" string-port)]
                                    [((~datum is!) x t)
                                     #:when top-level?
                                     (let ([x (shift-args #'x)]

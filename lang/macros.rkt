@@ -6,7 +6,8 @@
          syntax/stx
          "namespaces.rkt"
          "packages.rkt"
-         "syntax-utils.rkt")
+         "syntax-utils.rkt"
+         "type-check.rkt")
 
 (provide add-shen-macro-expander!
          remove-shen-macro-expander!
@@ -76,32 +77,48 @@
       (original-form form)
       (shen-form-expansion-loop ((macro-list-head macro-expander-list) form))))
 
-(define (expand-shen-form- stx)
-  (let ([ht (make-hash)])
-    (define expansion-result
-      (dm-subst ht (shen-form-expansion-loop (dm-syntax->datum stx ht))))
-    (if (syntax? expansion-result)
-        expansion-result
-        (datum->syntax stx expansion-result stx))))
-
 (define (expand-shen-form stx)
+  (syntax-parse (inner-expand-shen-form stx)
+    [((~datum define) define-form:shen-define)
+     #:cut
+     #:fail-when (and (type-check?) (not (attribute define-form.type-sig)))
+     "function needs a type signature with type checking enabled"
+     this-syntax]
+    [_ this-syntax]))
+
+(define (inner-expand-shen-form stx)
+  (define (expand-shen-form- stx)
+    (let ([ht (make-hash)])
+      (define expansion-result
+        (dm-subst ht (shen-form-expansion-loop (dm-syntax->datum stx ht))))
+      (if (syntax? expansion-result)
+          expansion-result
+          (datum->syntax stx expansion-result stx))))
+
+  (define (expand-shen-function-clause stx)
+    (syntax-parse stx
+      [(clause:function-clause-definition)
+       #:with expanded-body  (expand-shen-form #'clause.body)
+       #:with expanded-guard (if (attribute clause.guard)
+                                 (quasisyntax/loc #'clause.guard
+                                   (where #,(expand-shen-form #'clause.guard)))
+                                 #'())
+       (syntax/loc stx
+         (clause.pats ... clause.arrow expanded-body (~@ . expanded-guard)))]))
+
   (syntax-parse stx
     [((~datum define) define-form:shen-define)
-     #:with (expanded-clauses ...) (stx-map expand-shen-form #'((clause . define-form.clause) ...))
-     (expand-shen-form- (syntax/loc stx (define define-form.name (~@ . expanded-clauses) ...)))]
-    [((~literal clause) clause:function-clause-definition)
-     #:with expanded-body  (expand-shen-form #'clause.body)
-     #:with expanded-guard (if (attribute clause.guard)
-                               (quasisyntax/loc #'clause.guard
-                                 (where #,(expand-shen-form #'clause.guard)))
-                               #'())
-     (syntax/loc stx
-       (clause.pats ... clause.arrow expanded-body (~@ . expanded-guard)))]
+     #:with (expanded-clauses ...) (stx-map expand-shen-function-clause #'(define-form.clause ...))
+     (expand-shen-form-
+      (syntax/loc stx
+        (define define-form.name
+          (~? (~@ |{| (~@ . define-form.type-sig) |}|))
+          (~@ . expanded-clauses) ...)))]
     [((~datum defun) defun-form:kl-defun)
-     #:with (expanded-body-expr ...) (stx-map expand-shen-form #'(defun-form.body-expr ...))
+     #:with (expanded-body-expr ...) (stx-map inner-expand-shen-form #'(defun-form.body-expr ...))
      (expand-shen-form- (syntax/loc stx (defun defun-form.name expanded-body-expr ...)))]
     [((~datum defmacro) defmacro-form:shen-defmacro)
-     #:with (expanded-clause-expr ...) (stx-map expand-shen-form #'(defmacro-form.clause-expr ...))
+     #:with (expanded-clause-expr ...) (stx-map inner-expand-shen-form #'(defmacro-form.clause-expr ...))
      (expand-shen-form-
       (syntax/loc stx
         (defmacro defmacro-form.name
@@ -110,36 +127,36 @@
      (expand-shen-form- stx)]
     [((~literal cons) hd tl)
      (quasisyntax/loc stx
-       (cons #,(expand-shen-form #'hd)
-             #,(expand-shen-form #'tl)))]
+       (cons #,(inner-expand-shen-form #'hd)
+             #,(inner-expand-shen-form #'tl)))]
     [((~datum let) let-form:shen-let-form)
-     #:with (expanded-b-expr ...) (stx-map expand-shen-form #'(let-form.binding-expr ...))
-     #:with expanded-body-expr (expand-shen-form #'let-form.body-expr)
+     #:with (expanded-b-expr ...) (stx-map inner-expand-shen-form #'(let-form.binding-expr ...))
+     #:with expanded-body-expr (inner-expand-shen-form #'let-form.body-expr)
      (expand-shen-form-
       (syntax/loc stx
         (let (~@ . [let-form.binding-id expanded-b-expr])
              ...
              expanded-body-expr)))]
     [((~datum /.) lambda-form:shen-lambda-form)
-     #:with (expanded-body-expr ...) (stx-map expand-shen-form #'(lambda-form.body-expr ...))
+     #:with (expanded-body-expr ...) (stx-map inner-expand-shen-form #'(lambda-form.body-expr ...))
      (expand-shen-form-
       (syntax/loc stx
         (/. lambda-form.var ... expanded-body-expr ...)))]
     [((~datum package) package-form:shen-package)
      #:when (and (eq? (syntax->datum #'package-form.name) 'null)
                  (eq? (syntax->datum #'package-form.export-list) '()))
-     #:with (expanded-form ...) (stx-map expand-shen-form #'(package-form.top-level-decls ...))
+     #:with (expanded-form ...) (stx-map inner-expand-shen-form #'(package-form.top-level-decls ...))
      (syntax/loc stx
        (package null () expanded-form ...))]
     [((~datum package) package-form:shen-package)
      (let*-values ([(export-list)
-                    (eval-export-list (expand-shen-form #'package-form.export-list))]
+                    (eval-export-list (inner-expand-shen-form #'package-form.export-list))]
                    [(top-level-forms external-symbols internal-symbols)
                     (unpackage-shen-package
                      #'package-form.name
                      export-list
                      #'(package-form.top-level-decls ...))])
-       (with-syntax ([(expanded-form ...) (stx-map expand-shen-form top-level-forms)]
+       (with-syntax ([(expanded-form ...) (stx-map inner-expand-shen-form top-level-forms)]
                      [external-symbols (hash-keys external-symbols)]
                      [internal-symbols (hash-keys internal-symbols)]
                      [export-list (datum->syntax #'package-form.export-list export-list)])
@@ -155,12 +172,12 @@
      #:when (stx-pair? #'body)
      (syntax-parse (expand-shen-form- #'body)
        [(hd . tl)
-        #:with expanded-car (expand-shen-form #'hd)
-        #:with expanded-cdr (stx-map expand-shen-form #'tl)
+        #:with expanded-car (inner-expand-shen-form #'hd)
+        #:with expanded-cdr (stx-map inner-expand-shen-form #'tl)
         (if (syntax? stx)
             (syntax/loc stx (expanded-car . expanded-cdr))
             #'(expanded-car . expanded-cdr))]
-       [body (expand-shen-form #'body)])]
+       [body (inner-expand-shen-form #'body)])]
     [body:expr
      (expand-shen-form- #'body)]))
 

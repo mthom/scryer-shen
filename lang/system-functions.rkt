@@ -20,9 +20,18 @@
                   [read-syntax shen:read-syntax])
          (for-syntax syntax/parse)
          syntax/parse/define
-         syntax/strip-context)
+         syntax/strip-context
+         "type-check.rkt")
 
 (provide (all-defined-out))
+
+(define-syntax tc
+  (syntax-parser
+    [(_ (~datum +))
+     #'(begin (type-check? #t) #t)]
+    [(_ (~datum -))
+     #'(begin (type-check? #f) #f)]
+    [_ (raise-syntax-error 'tc "expects + or -")]))
 
 (define-syntax destroy
   (syntax-parser
@@ -141,7 +150,7 @@
   (define expanded-forms
     ;; (parameterize ([current-readtable shen-readtable])
       (for/list ([stx (in-port (curry shen:read-syntax (object-name in)) in)])
-        (expand (strip-context (expand-shen-form stx)))));; )
+        (expand (strip-context (expand-shen-form stx)))))
   (close-input-port in)
   (eval-syntax #`(begin #,@expanded-forms))
   'loaded)
