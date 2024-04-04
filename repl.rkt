@@ -5,16 +5,16 @@
 
 (require racket/runtime-path)
 
-(require "lang/interposition-points.rkt"
-         "lang/macros.rkt"
-         "lang/namespaces.rkt"
-         "lang/namespace-requires.rkt"
-         "lang/printer.rkt"
-         "lang/prolog-debug-gui.rkt"
-         (only-in "lang/reader.rkt"
+(require shen/lang/interposition-points
+         shen/lang/macros
+         shen/lang/namespaces
+         shen/lang/namespace-requires
+         shen/lang/printer
+         shen/lang/prolog-debug-gui
+         (only-in shen/lang/reader
                   detect-prolog-syntax
                   shen-readtable)
-         (only-in "lang/system-functions.rkt"
+         (only-in shen/lang/system-functions
                   [eval shen:eval])
          (only-in racket/exn
                   exn->string))
