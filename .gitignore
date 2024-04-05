@@ -1,0 +1,10 @@
+**/compiled/*
+doc/
+**/*.bak
+*~
+**.rktd
+**.sxref
+
+dist/
+
+.DS_Store
