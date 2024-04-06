@@ -1,7 +1,6 @@
 #lang racket
 
 (require "pairs.rkt"
-         "vectors.rkt"
          racket/base
          racket/generator
          racket/match)
@@ -21,15 +20,6 @@
         [space (sequence-append (in-value "") (in-cycle '(#\space)))])
     (fprintf port "~a" space)
     (shen-printer arg port)))
-
-(define (print-vector-from-offset datum port [offset 0])
-  (write-string "<" port)
-  (unless (vector-empty? datum)
-    (shen-printer (vector-ref datum offset) port)
-    (for ([elt (in-vector datum (add1 offset))])
-      (write-string " " port)
-      (shen-printer elt port)))
-  (write-string ">" port))
 
 (define/contract (shen-printer datum port)
   (any/c output-port? . -> . any)
@@ -59,9 +49,13 @@
        (shen-printer elt port))
      (write-string ")" port)]
     [(? vector?)
-     (print-vector-from-offset datum port)]
-    [(? vector-view?)
-     (print-vector-from-offset (vector-view-vec datum) port (vector-view-offset datum))]
+     (write-string "<" port)
+     (unless (vector-empty? datum)
+       (shen-printer (vector-ref datum 0) port)
+       (for ([elt (in-vector datum 1)])
+         (write-string " " port)
+         (shen-printer elt port)))
+     (write-string ">" port)]
     [#\|
      (write-string "bar!" port)]
     [_

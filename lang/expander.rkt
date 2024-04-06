@@ -8,7 +8,6 @@
          "pairs.rkt"
          "prolog.rkt"
          "systemf.rkt"
-         "vectors.rkt"
          syntax/parse/define
          (for-syntax "prolog-syntax.rkt"
                      racket/base
@@ -197,21 +196,21 @@
     [((~literal @s) arg1 args ...+)
      #'(string-append arg1 args ...)]))
 
-(define (@v-tail-pattern num-elts)
+(define (@v-pattern num-elts)
   (lambda (vec)
-    (values (vector-take vec num-elts)
-            (make-vector-view vec num-elts))))
+    (vector-append (vector-take vec num-elts)
+                   (vector (vector-drop vec num-elts)))))
 
 (define-match-expander @v
   (syntax-parser
     [((~literal @v) arg ...+ (~literal <>))
+     #:with num-elts (length (syntax->list #'(arg ...)))
      #'(vector arg ...)]
     [((~literal @v) arg ...+ last-arg)
      #:with num-elts (length (syntax->list #'(arg ...)))
      #'(? vector?
-          (app (@v-tail-pattern (quote num-elts))
-               (vector arg ...)
-               last-arg))])
+          (app (@v-pattern (quote num-elts))
+               (vector arg ... last-arg)))])
   (syntax-parser
     [((~literal @v) arg ...+ last-arg)
      #'(vector-append (vector arg ...) last-arg)]))
