@@ -27,8 +27,8 @@
                          [>= #:arity 2]
                          [<= #:arity 2]
                          [make-vector absvector #:arity 1]
-                         [vector-ref <-address #:arity 2]
-                         [vector-set! address-> #:arity 3]
+                         [<-vector #:arity 2]
+                         [vector-> #:arity 3]
                          [cons adjoin #:arity 2]
                          [append #:arity 2 #:polyadic #:right]
                          [map #:arity 2]
@@ -54,6 +54,7 @@
                             eval-kl
                             function
                             internal
+                            limit
                             load
                             output
                             symbol?

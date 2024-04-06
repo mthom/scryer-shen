@@ -156,3 +156,15 @@
   (thunk stx))
 
 (define (thaw f) (f))
+
+;; Shen vectors are 1-indexed while Racket's are 0-indexed so sub1 to
+;; compensate
+
+(define (<-vector vec idx)
+  (vector-ref vec (sub1 idx)))
+
+(define (vector-> vec idx value)
+  (vector-set! vec (sub1 idx) value)
+  vec)
+
+(define limit vector-length)
