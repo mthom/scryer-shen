@@ -14,6 +14,9 @@
          (only-in "failure.rkt"
                   fail
                   fail-if)
+         (only-in "vectors.rkt"
+                  vector-view-ref
+                  vector-view-set!)
          "macros.rkt"
          "namespaces.rkt"
          (only-in "reader.rkt"
@@ -156,3 +159,18 @@
   (thunk stx))
 
 (define (thaw f) (f))
+
+(define (<-vector vec idx)
+  ((if (vector? vec)
+       vector-ref
+       vector-view-ref)
+   vec
+   idx))
+
+(define (vector-> vec idx value)
+  ((if (vector? vec)
+       vector-set!
+       vector-view-set!)
+   vec
+   idx
+   value))
