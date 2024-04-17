@@ -49,7 +49,7 @@
            #:with type  #'symbol)
   (pattern (~seq (~var datum-term (shen-prolog-term #:type-datum #t))
                  (~literal :)
-                 type-term:shen-prolog-term)
+                 (~var type-term  (shen-prolog-term #:type-datum #t)))
            #:with datum #'datum-term.term
            #:with type  #'type-term.term))
 
@@ -59,7 +59,7 @@
            #:with assumption #'(#%prolog-functor type-check type-decl.datum type-decl.type)
            #:with head-args #'(type-decl.datum type-decl.type)
            #:with shen-prolog-term #'(#%prolog-functor type-check type-decl.datum type-decl.type))
-  (pattern (~seq goal:shen-prolog-term)
+  (pattern (~var goal (shen-prolog-term #:type-datum #t))
            #:with assumption #'goal.term
            #:with head-args #'(goal.term)
            #:with shen-prolog-term #'(#%prolog-functor g (#%prolog-functor : user goal.term))))

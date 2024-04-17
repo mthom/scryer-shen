@@ -138,10 +138,10 @@
              ...
              expanded-body-expr)))]
     [((~datum /.) lambda-form:shen-lambda-form)
-     #:with (expanded-body-expr ...) (stx-map inner-expand-shen-form #'(lambda-form.body-expr ...))
+     #:with expanded-body-expr (inner-expand-shen-form #'lambda-form.body-expr)
      (expand-shen-form-
       (syntax/loc stx
-        (/. lambda-form.var ... expanded-body-expr ...)))]
+        (/. lambda-form.var ... expanded-body-expr)))]
     [((~datum package) package-form:shen-package)
      #:when (and (eq? (syntax->datum #'package-form.name) 'null)
                  (eq? (syntax->datum #'package-form.export-list) '()))

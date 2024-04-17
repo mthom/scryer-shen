@@ -19,6 +19,7 @@
                      syntax/parse
                      syntax/stx
                      "syntax-utils.rkt"
+                     "type-check.rkt"
                      "types-syntax.rkt"))
 
 (begin-for-syntax
@@ -47,39 +48,7 @@
                            [(_ a b . cs) #'(wrapper-id a (new-id b . cs))]
                            [_:id #''renamed-id]))))
                 new-id]
-      [else wrapper-id]))
-
-  (define (type-check-queries type-sig clauses)
-    (define (pattern-hyps pat-types pats clause-guard)
-      (with-syntax ([(pat ...) pats]
-                    [(pat-type ...) pat-types]
-                    [clause-guard clause-guard])
-        (shen-cons-syntax #`((#%prolog-functor type-check pat pat-type)
-                             ...
-                             #,@(if (eq? (syntax->datum #'clause-guard) #t)
-                                    #'()
-                                    #'((#%prolog-functor type-check clause-guard verified)))))))
-
-    (syntax-parse type-sig
-      [(type-sig:shen-function-type-sig)
-       (with-syntax* ([(pat-type ... clause-type) #'(type-sig.type ...)]
-                      [(((pat-form ...) ...)
-                        (clause-body ...)
-                        (clause-guard ...))
-                       (syntax-parse clauses
-                         [((clause:function-clause-definition) ...+)
-                          #`(((clause.shen-prolog-pat ...) ...)
-                             (clause.shen-prolog-body ...)
-                             (clause.shen-prolog-guard ...))])]
-                      [(pattern-hyp ...) (stx-map
-                                          (curry pattern-hyps #'(pat-type ...))
-                                          #'((pat-form ...) ...)
-                                          #'(clause-guard ...))])
-         #'((#%prolog-functor : shen
-                              (#%prolog-functor start-proof pattern-hyp
-                                                (#%prolog-functor type-check clause-body clause-type)
-                                                _))
-            ...))])))
+      [else wrapper-id])))
 
 (define-syntax define-shen-function
   (syntax-parser
@@ -154,12 +123,11 @@
     [(shen-define define-form:shen-define)
      #:when (attribute define-form.type-sig)
      #:cut
-     #:with type-check-queries
-     (expand-shen-prolog-query
-      (type-check-queries #'define-form.type-sig #'(define-form.clause ...)))
-     #'(begin
-         (printf "~s~n" 'type-check-queries)
-         (define-shen-function define-form.name define-form.wrapper))]
+     #:do [(enqueue-type-check-queries!
+            #'define-form.name
+            #'define-form.type-sig
+            #'(define-form.clause ...))]
+     #'(define-shen-function define-form.name define-form.wrapper)]
     [(shen-define define-form:shen-define)
      #'(define-shen-function define-form.name define-form.wrapper)]
     [shen-define:id #''define]))
@@ -261,8 +229,7 @@
   (syntax-parser
     [(shen-lambda lambda-form:shen-lambda-form)
      #'(lambda (lambda-form.var ...)
-         lambda-form.body-expr
-         ...)]))
+         lambda-form.body-expr)]))
 
 (define-syntax shen-let
   (syntax-parser
@@ -281,13 +248,16 @@
 (define-syntax shen-datatype
   (syntax-parser
     [(shen-datatype type-module-name:id sequent:shen-type-sequent ...+)
-     #:do [(printf "prolog-forms: ~a~n~n"
-                   (syntax->datum #'(sequent.prolog-form ... ...)))
-           (stx-map (lambda (stx)
-                      (syntax-parse stx
-                        [((~datum defprolog) rule-name:id rule:shen-prolog-rule ...+)
-                         (printf "~a" (expand-shen-defprolog #'rule-name #'(rule ...)))]))
-                    #'(sequent.prolog-form ... ...))]
+     #:with assertion-strings
+     (apply string-append
+            (format "[user].\n:- module('~a#type', []).\n"
+                    (syntax->datum #'type-module-name))
+            (stx-map (lambda (stx)
+                       (syntax-parse stx
+                         [((~datum defprolog) rule-name:id rule:shen-prolog-rule ...+)
+                          (expand-shen-defprolog #'rule-name #'(rule ...))]))
+                     #'(sequent.prolog-form ... ...)))
+     #:do [(printf "prolog-strings: ~s~n" (syntax->datum #'assertion-strings))]
      #'(begin)]))
 
 (define-syntax shen-if
