@@ -1,6 +1,7 @@
 #lang racket
 
 (require syntax/parse
+         syntax/stx
          "syntax-utils.rkt")
 
 (provide shen-type-sequent)
@@ -53,12 +54,24 @@
            #:with datum #'datum-term.term
            #:with type  #'type-term.term))
 
+(define-splicing-syntax-class shen-type-equation
+  #:attributes (first-arg second-arg)
+  (pattern (~seq (~var first-arg (shen-prolog-term #:type-datum #t))
+                 (~literal ~)
+                 (~var second-arg (shen-prolog-term #:type-datum #t)))))
+
 (define-splicing-syntax-class shen-sequent-assertion
   #:attributes (assumption head-args shen-prolog-term)
   (pattern (~seq type-decl:shen-type-declaration)
            #:with assumption #'(#%prolog-functor type-check type-decl.datum type-decl.type)
            #:with head-args #'(type-decl.datum type-decl.type)
            #:with shen-prolog-term #'(#%prolog-functor type-check type-decl.datum type-decl.type))
+  (pattern (~seq type-equation:shen-type-equation)
+           #:with assumption #'(#%prolog-functor type-eq type-equation.first-arg type-equation.second-arg)
+           #:with head-args  #'(type-equation.first-arg type-equation.second-arg)
+           #:with shen-prolog-term #'(#%prolog-functor g (#%prolog-functor type-eq
+                                                                           type-equation.first-arg
+                                                                           type-equation.second-arg)))
   (pattern (~var goal (shen-prolog-term #:type-datum #t))
            #:with assumption #'goal.term
            #:with head-args #'(goal.term)
@@ -90,11 +103,13 @@
 
 (define-splicing-syntax-class shen-sequent-implicative
   #:attributes (conq (head-arg 1) shen-prolog-term)
-  (pattern (~seq assertions:shen-sequent-assertion-list (~literal >>) p:shen-sequent-assertion)
-           #:with conq             #'p.assumption
+  (pattern (~seq assertions:shen-sequent-assertion-list (~literal >>) ps:shen-sequent-assertion-list)
+           #:with conq             (if (stx-null? (stx-cdr #'(ps.assumption ...)))
+                                       (stx-car #'(ps.assumption ...))
+                                       (shen-cons-syntax #'(ps.assumption ...)))
            #:with (head-arg ...)   #'(assertions.assumption ...)
            #:with shen-prolog-term #`(>> #,(shen-cons-syntax #'(assertions.assumption ...))
-                                         p.assumption)))
+                                         conq)))
 
 ;; The consequent is the head of a type sequent being generated.
 (define-splicing-syntax-class shen-sequent-consequent
