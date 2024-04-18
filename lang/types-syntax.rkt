@@ -50,15 +50,15 @@
            #:with type  #'symbol)
   (pattern (~seq (~var datum-term (shen-prolog-term #:type-datum #t))
                  (~literal :)
-                 (~var type-term  (shen-prolog-term #:type-datum #t)))
+                 (~var type-term shen-prolog-term))
            #:with datum #'datum-term.term
            #:with type  #'type-term.term))
 
 (define-splicing-syntax-class shen-type-equation
   #:attributes (first-arg second-arg)
-  (pattern (~seq (~var first-arg (shen-prolog-term #:type-datum #t))
+  (pattern (~seq (~var first-arg  (shen-prolog-term #:type-datum #t))
                  (~literal ~)
-                 (~var second-arg (shen-prolog-term #:type-datum #t)))))
+                 (~var second-arg shen-prolog-term))))
 
 (define-splicing-syntax-class shen-sequent-assertion
   #:attributes (assumption head-args shen-prolog-term)
@@ -72,7 +72,7 @@
            #:with shen-prolog-term #'(#%prolog-functor g (#%prolog-functor type-eq
                                                                            type-equation.first-arg
                                                                            type-equation.second-arg)))
-  (pattern (~var goal (shen-prolog-term #:type-datum #t))
+  (pattern (~var goal shen-prolog-term)
            #:with assumption #'goal.term
            #:with head-args #'(goal.term)
            #:with shen-prolog-term #'(#%prolog-functor g (#%prolog-functor : user goal.term))))

@@ -69,7 +69,7 @@
            #:fail-unless (= (string-length (syntax-e #'str)) 1)
            "string literal patterns must consist of a single character"))
 
-(define (syntax->shen-prolog-term stx [type-datum? #f])
+(define (syntax->shen-prolog-term stx [type-datum? #t])
   (syntax-parse stx
     [(~var term (shen-prolog-term #:type-datum type-datum?))
      #'term.term]))
@@ -84,10 +84,10 @@
 (define-splicing-syntax-class shen-function-type-sig
   #:attributes ((type 1))
   #:datum-literals (-->)
-  (pattern (~seq (~var t1 (shen-prolog-term #:type-datum #t))
-                 (~seq --> (~var t2 (shen-prolog-term #:type-datum #t))) ...+)
+  (pattern (~seq (~var t1 shen-prolog-term)
+                 (~seq --> (~var t2 shen-prolog-term)) ...+)
            #:with (type ...) #'(t1.term t2.term ...))
-  (pattern (~seq --> (~var t (shen-prolog-term #:type-datum #t)))
+  (pattern (~seq --> (~var t shen-prolog-term))
            #:with (type ...) #'(t.term)))
 
 (define (wrap-tagged-shen-prolog-term datum-term)
@@ -106,12 +106,17 @@
 (define-syntax-class (shen-prolog-term #:type-datum [type-datum? #f])
   #:attributes (term)
   (pattern str:string
-           #:with term #'(#%prolog-functor string str))
+           #:with term (if type-datum?
+                           #'(#%prolog-functor string str)
+                           #'str))
   (pattern num:number
-           #:with term #'(#%prolog-functor number num))
+           #:with term (if type-datum?
+                           #'(#%prolog-functor number num)
+                           #'num))
   (pattern sym:shen-var-id
-           #:with term (wrap-tagged-shen-prolog-term
-                        (if type-datum? #'sym #'(#%prolog-functor ? sym))))
+           #:with term (if type-datum?
+                           (wrap-tagged-shen-prolog-term #'sym)
+                           #'sym))
   (pattern (~and sym:id (~not :shen-var-id))
            #:fail-when (or (shen-special-form? #'sym)
                            (syntax-parse #'sym
@@ -120,7 +125,7 @@
                               #t]
                              [_ #f]))
            #f
-           #:with term #'(#%prolog-functor symbol sym))
+           #:with term (if type-datum? #'(#%prolog-functor symbol sym) #'sym))
   (pattern ((~and id:id (~or (~datum @p)
                              (~datum @s)
                              (~datum @v)))
@@ -164,7 +169,7 @@
             (~var first-arg     (shen-prolog-term #:type-datum type-datum?))
             (~var remaining-arg (shen-prolog-term #:type-datum type-datum?))
             ...)
-           #:when (not type-datum?)
+           #:when type-datum?
            #:with fn-term        (syntax->shen-function-term #'f)
            #:with inner-apply    #'(#%prolog-functor apply fn-term first-arg.term)
            #:with (arg-term ...) (stx-map syntax->shen-prolog-term #'(remaining-arg ...))

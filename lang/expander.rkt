@@ -9,6 +9,7 @@
          "prolog.rkt"
          syntax/parse/define
          "systemf.rkt"
+         "type-check.rkt"
          (for-syntax "prolog-syntax.rkt"
                      racket/base
                      racket/function
@@ -19,7 +20,6 @@
                      syntax/parse
                      syntax/stx
                      "syntax-utils.rkt"
-                     "type-check.rkt"
                      "types-syntax.rkt"))
 
 (begin-for-syntax
