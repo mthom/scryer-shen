@@ -24,6 +24,12 @@
 (define/contract (shen-printer datum port)
   (any/c output-port? . -> . any)
   (match datum
+    [(cons '#%type-functor (? cons? type))
+     (write-string "(" port)
+     (print-cons-contents type port)
+     (write-string ")" port)]
+    [(cons '#%type-functor type)
+     (shen-printer type port)]
     [(? empty?)
      (write-string "[]" port)]
     [(? cons?)

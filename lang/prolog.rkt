@@ -26,7 +26,7 @@
   (fprintf scryer-prolog-out "shen_prolog_eval((~a)).~n" iso-prolog-query)
 
   (with-handlers ([(const #t) (lambda (e)
-                                (printf "prolog error: ~a~n" (exn->string e))
+                                (printf "prolog error on query ~a: ~a~n" iso-prolog-query (exn->string e))
                                 (read-char scryer-prolog-in) ;; read trailing newline
                                 #f)])
     (let loop ()

@@ -30,35 +30,35 @@
 
 (define-splicing-syntax-class shen-type-declaration
   #:attributes (datum type)
-  (pattern (~seq (~var num (shen-prolog-term #:type-datum #t))
+  (pattern (~seq (~var num (shen-prolog-term #:untagged-vars #t))
                  (~literal :)
                  (~literal number))
            #:do [(tag-functor-syntax! #'num #'number)]
            #:with datum #'(#%prolog-functor number num.term)
            #:with type  #'number)
-  (pattern (~seq (~var str (shen-prolog-term #:type-datum #t))
+  (pattern (~seq (~var str (shen-prolog-term #:untagged-vars #t))
                  (~literal :)
                  (~literal string))
            #:do [(tag-functor-syntax! #'str #'string)]
            #:with datum #'(#%prolog-functor string str.term)
            #:with type  #'string)
-  (pattern (~seq (~var sym (shen-prolog-term #:type-datum #t))
+  (pattern (~seq (~var sym (shen-prolog-term #:untagged-vars #t))
                  (~literal :)
                  (~literal symbol))
            #:do [(tag-functor-syntax! #'sym #'symbol)]
            #:with datum #'(#%prolog-functor symbol sym.term)
            #:with type  #'symbol)
-  (pattern (~seq (~var datum-term (shen-prolog-term #:type-datum #t))
+  (pattern (~seq (~var datum-term (shen-prolog-term #:untagged-vars #t))
                  (~literal :)
-                 (~var type-term shen-prolog-term))
+                 (~var type-term (shen-prolog-term #:type-datum #f)))
            #:with datum #'datum-term.term
            #:with type  #'type-term.term))
 
 (define-splicing-syntax-class shen-type-equation
   #:attributes (first-arg second-arg)
-  (pattern (~seq (~var first-arg  (shen-prolog-term #:type-datum #t))
+  (pattern (~seq (~var first-arg  (shen-prolog-term #:type-datum #f #:untagged-vars #t))
                  (~literal ~)
-                 (~var second-arg shen-prolog-term))))
+                 (~var second-arg (shen-prolog-term #:type-datum #f #:untagged-vars #t)))))
 
 (define-splicing-syntax-class shen-sequent-assertion
   #:attributes (assumption head-args shen-prolog-term)

@@ -7,6 +7,7 @@
 :- use_module(library(lists)).
 
 :- use_module('scryer-prolog-server').
+:- use_module('type-checker/type-checker').
 
 repl :-
     catch(read_and_match, E, print_exception(E)),

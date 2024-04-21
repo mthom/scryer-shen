@@ -9,18 +9,15 @@
                   [vector r:vector])
          (only-in racket/exn
                   exn->string)
-         (only-in "packages.rkt"
-                  package-list)
          (only-in "failure.rkt"
                   fail
                   fail-if)
          "macros.rkt"
          "namespaces.rkt"
-         (only-in "reader.rkt"
-                  [read-syntax shen:read-syntax])
+         (only-in "packages.rkt"
+                  package-list)
          (for-syntax syntax/parse)
          syntax/parse/define
-         syntax/strip-context
          "type-check.rkt")
 
 (provide (all-defined-out))
@@ -144,16 +141,6 @@
 
 (define (internal pkg-name)
   (package-list pkg-name 'internal))
-
-(define (load filename)
-  (define in (open-input-file filename))
-  (define expanded-forms
-    ;; (parameterize ([current-readtable shen-readtable])
-      (for/list ([stx (in-port (curry shen:read-syntax (object-name in)) in)])
-        (expand (strip-context (expand-shen-form stx)))))
-  (close-input-port in)
-  (eval-syntax #`(begin #,@expanded-forms))
-  'loaded)
 
 (define (output fmt-string . args)
   (apply printf fmt-string args))

@@ -1,56 +1,70 @@
 #lang racket
 
-(require (for-syntax data/queue
-                     (only-in "prolog-syntax.rkt"
+(require data/queue
+         (for-syntax (only-in "prolog-syntax.rkt"
+                              expand-shen-defprolog
                               prolog-syntax-writers)
                      racket
                      racket/syntax
                      syntax/parse
                      syntax/stx
-                     "syntax-utils.rkt"))
+                     "syntax-utils.rkt"
+                     "types-syntax.rkt"))
 
-(provide (for-syntax assert-functor-declare-functor-queue!
-                     clear-functor-declare-functor-queue!
-                     enqueue-type-check-queries!
-                     retract-functor-declare-functor-queue!)
-         type-check?)
+(provide (for-syntax function-def->type-check-queries
+                     datatype->type-definition)
+         clear-type-check-queues!
+         enqueue-datatype-definition!
+         enqueue-function-type-data!
+         type-check?
+         type-check-definitions-and-queries)
 
 (define type-check? (make-parameter #f (lambda (val)
                                          (unless (boolean? val)
                                            (raise-type-error 'tc "boolean" val))
                                          val)))
 
+(define function-assert-declare-queue (make-queue))
+(define function-retract-declare-queue (make-queue))
+(define function-type-check-queue (make-queue))
+(define datatype-definition-queue (make-queue))
+
+(define (clear-type-check-queues!)
+  (set! datatype-definition-queue (make-queue))
+  (set! function-assert-declare-queue (make-queue))
+  (set! function-retract-declare-queue (make-queue))
+  (set! function-type-check-queue (make-queue)))
+
+(define (type-check-definitions-and-queries)
+  (values (queue->list datatype-definition-queue)
+          (queue->list function-assert-declare-queue)
+          (queue->list function-retract-declare-queue)
+          (queue->list function-type-check-queue)))
+
+(define (enqueue-datatype-definition! type-definition)
+  (enqueue! datatype-definition-queue type-definition))
+
+(define (enqueue-function-type-data! query-strings assert-string retract-string)
+  (for ([query-string (in-list query-strings)])
+    (enqueue! function-type-check-queue query-string))
+
+  (enqueue! function-assert-declare-queue assert-string)
+  (enqueue! function-retract-declare-queue retract-string))
+
 (begin-for-syntax
-  (define function-declare-functor-queue (make-queue))
-  (define function-type-check-queue (make-queue))
+  (define (datatype->type-definition type-module-name sequents)
+    (syntax-parse sequents
+      [((sequent:shen-type-sequent) ...+)
+       (apply string-append
+              (format ":- module('~a#type', []).\n\n"
+                      (syntax->datum type-module-name))
+              (stx-map (lambda (stx)
+                         (syntax-parse stx
+                           [((~datum defprolog) rule-name:id rule:shen-prolog-rule ...+)
+                            (expand-shen-defprolog #'rule-name #'(rule ...))]))
+                       #'(sequent.prolog-form ... ...)))]))
 
-  (define (assert-functor-declare-functor-queue!)
-    (for/list ([declare-functor (in-queue function-declare-functor-queue)])
-      (define-values (string-port write-prolog-goals received-vars-vec)
-        (prolog-syntax-writers #t #f))
-
-      (write-prolog-goals #`((retractall (#%prolog-functor : inference-rules #,declare-functor))
-                             (assertz (#%prolog-functor : inference-rules #,declare-functor)))
-                          #t)
-      (write-string ".\n" string-port)
-
-      (get-output-string string-port)))
-
-  (define (retract-functor-declare-functor-queue!)
-    (for/list ([declare-functor (in-queue function-declare-functor-queue)])
-      (define-values (string-port write-prolog-goals received-vars-vec)
-        (prolog-syntax-writers #t #f))
-
-      (write-prolog-goals #`((retractall (#%prolog-functor : inference-rules #,declare-functor)))
-                          #t)
-      (write-string ".\n" string-port)
-
-      (get-output-string string-port)))
-
-  (define (clear-functor-declare-functor-queue!)
-    (set! function-declare-functor-queue (make-queue)))
-
-  (define (enqueue-type-check-queries! fn-name type-sig clauses)
+  (define (function-def->type-check-queries fn-name type-sig clauses)
     (define (pattern-hyps pat-types pats clause-guard)
       (with-syntax ([(pat ...) pats]
                     [(pat-type ...) pat-types])
@@ -62,18 +76,34 @@
                                                          (#%prolog-functor apply #,@clause-guard)
                                                          verified)))))))
 
-    (syntax-parse type-sig
-      [(type-sig:shen-function-type-sig)
-       (define declare-functor
-         (with-syntax ([(type-sig-type ... result-type) #'(type-sig.type ...)])
-           #`(#%prolog-functor declare #,fn-name
-                               #,(foldr (lambda (type acc)
-                                          #`(#%prolog-functor --> #,type #,acc))
-                                        #'result-type
-                                        (syntax->list #'(type-sig-type ...))))))
+    (define-values (assert-declare-string retract-declare-string)
+      (syntax-parse type-sig
+        [(type-sig:shen-function-type-sig)
+         (define declare-functor
+          (with-syntax ([(type-sig-type ... result-type) #'(type-sig.type ...)])
+            #`(#%prolog-functor declare #,fn-name
+                                #,(if (stx-null? #'(type-sig-type ...))
+                                      #'(#%prolog-functor --> result-type)
+                                      (foldr (lambda (type acc)
+                                               #`(#%prolog-functor --> #,type #,acc))
+                                             #'result-type
+                                             (syntax->list #'(type-sig-type ...)))))))
 
-       (printf "declare: ~a~n" declare-functor)
-       (enqueue! function-declare-functor-queue declare-functor)])
+         (values
+          (let-values ([(string-port write-prolog-goals received-vars-vec) (prolog-syntax-writers #t #f)])
+            ;; assert the function declares
+            (write-prolog-goals #`((retractall (#%prolog-functor : inference-rules #,declare-functor))
+                                   (assertz (#%prolog-functor : inference-rules #,declare-functor)))
+                                #t)
+            (get-output-string string-port))
+
+          (let-values ([(string-port write-prolog-goals received-vars-vec) (prolog-syntax-writers #t #f)])
+            ;; retract the function declares if type checking fails
+            (define-values (string-port write-prolog-goals received-vars-vec)
+              (prolog-syntax-writers #t #f))
+
+            (write-prolog-goals #`((retractall (#%prolog-functor : inference-rules #,declare-functor))) #t)
+            (get-output-string string-port)))]))
 
     (define shen-prolog-queries
       (syntax-parse type-sig
@@ -91,19 +121,16 @@
                                             (curry pattern-hyps #'(pat-type ...))
                                             #'((pat-form ...) ...)
                                             #'(clause-guard ...))])
-           #'((#%prolog-functor : shen
-                                (#%prolog-functor start-proof
-                                                  pattern-hyp
-                                                  (#%prolog-functor type-check clause-body clause-type)
-                                                  _))
+           #'(((: type-checker (#%prolog-functor start-proof
+                                 pattern-hyp
+                                 (#%prolog-functor type-check clause-body clause-type)
+                                 _)))
               ...))]))
 
-    (for ([query-syntax (in-syntax shen-prolog-queries)])
-      (define-values (string-port write-prolog-goals received-vars-vec)
-        (prolog-syntax-writers #t #f))
-
-      (write-prolog-goals query-syntax #t)
-      (write-string ".\n" string-port)
-
-      (printf "query output: ~a~n" (get-output-string string-port))
-      (enqueue! function-type-check-queue (get-output-string string-port)))))
+    (values (for/list ([query-syntax (in-syntax shen-prolog-queries)])
+              (define-values (string-port write-prolog-goals received-vars-vec)
+                (prolog-syntax-writers #t #f))
+              (write-prolog-goals query-syntax #t)
+              (get-output-string string-port))
+            assert-declare-string
+            retract-declare-string)))

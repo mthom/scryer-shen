@@ -123,13 +123,19 @@
     [(shen-define define-form:shen-define)
      #:when (attribute define-form.type-sig)
      #:cut
-     #:do [(enqueue-type-check-queries!
-            #'define-form.name
-            #'define-form.type-sig
-            #'(define-form.clause ...))]
-     #'(define-shen-function define-form.name define-form.wrapper)]
+     (let-values ([(queries assert-strings retract-strings)
+                   (function-def->type-check-queries
+                    #'define-form.name
+                    #'define-form.type-sig
+                    #'(define-form.clause ...))])
+       #`(begin
+           (define-shen-function define-form.name define-form.wrapper)
+           (enqueue-function-type-data! '#,queries '#,assert-strings '#,retract-strings)
+           define-form.name))]
     [(shen-define define-form:shen-define)
-     #'(define-shen-function define-form.name define-form.wrapper)]
+     #'(begin
+         (define-shen-function define-form.name define-form.wrapper)
+         define-form.name)]
     [shen-define:id #''define]))
 
 (define-syntax shen-defmacro
@@ -248,17 +254,10 @@
 (define-syntax shen-datatype
   (syntax-parser
     [(shen-datatype type-module-name:id sequent:shen-type-sequent ...+)
-     #:with assertion-strings
-     (apply string-append
-            (format "[user].\n:- module('~a#type', []).\n"
-                    (syntax->datum #'type-module-name))
-            (stx-map (lambda (stx)
-                       (syntax-parse stx
-                         [((~datum defprolog) rule-name:id rule:shen-prolog-rule ...+)
-                          (expand-shen-defprolog #'rule-name #'(rule ...))]))
-                     #'(sequent.prolog-form ... ...)))
-     #:do [(printf "prolog-strings: ~s~n" (syntax->datum #'assertion-strings))]
-     #'(begin)]))
+     #:with iso-prolog-type-definitions (datatype->type-definition
+                                         #'type-module-name
+                                         #'(sequent ...))
+     #'(enqueue-datatype-definition! (quote iso-prolog-type-definitions))]))
 
 (define-syntax shen-if
   (syntax-parser

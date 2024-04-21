@@ -1,6 +1,7 @@
 #lang racket
 
 (require data/gvector
+         "pairs.rkt"
          (for-template racket)
          syntax/parse
          syntax/stx
@@ -147,6 +148,12 @@
                                     #:when top-level?
                                     (let ([t (shift-args #'t)])
                                       (write-string "cont:shift(return_to_shen(" string-port)
+                                      (write-prolog-datum t)
+                                      (write-string "))" string-port))]
+                                   [((~datum type-check-return) t)
+                                    #:when top-level?
+                                    (let ([t (shift-args #'t)])
+                                      (write-string "cont:shift(type_check_return_to_shen(" string-port)
                                       (write-prolog-datum t)
                                       (write-string "))" string-port))]
                                    [((~datum var?) t)

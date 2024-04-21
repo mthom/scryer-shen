@@ -78,6 +78,9 @@ pause_or_return(cont(Cont), bind(F,X), VNs) :-
 pause_or_return(cont(_Cont), return_to_shen(T), VNs0) :-
     variable_labels(T, VNs0, VNs),
     function_eval(return_to_shen(T), VNs).
+pause_or_return(cont(_Cont), type_check_return_to_shen(T), VNs0) :-
+    variable_labels(T, VNs0, VNs),
+    function_eval(type_check_return_to_shen(T), VNs).
 
 function_eval(bind(F,X), VNs) :-
     functor_sexpr(VNs, "(~w ", F, SExpr),
@@ -85,6 +88,9 @@ function_eval(bind(F,X), VNs) :-
     read(X).                        % .. and block until the result is read back from scryer-shen.
 function_eval(return_to_shen(T), VNs) :-
     functor_sexpr(VNs, "[~w ", T, SExpr),
+    format("[~s false]~n", [SExpr]).
+function_eval(type_check_return_to_shen(T), VNs) :-
+    functor_sexpr(VNs, "[#%type-functor ~w ", T, SExpr),
     format("[~s false]~n", [SExpr]).
 
 functor_sexpr(VNs, FunctorRep, T, SExpr) :-
@@ -99,6 +105,7 @@ functor_sexpr(VNs, FunctorRep, T, SExpr) :-
 
 end_bracket("(~w ", ")").
 end_bracket("[~w ", "]").
+end_bracket("[#%type-functor ~w ", "]").
 
 functor_args_sexpr(VNs, FunctorRep, '.', [Car, Cdr], SExpr) :-
     !,

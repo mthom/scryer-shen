@@ -11,6 +11,8 @@
                   shen-curry-out
                   shen-function-out)
          "failure.rkt"
+         (only-in "load.rkt"
+                  load)
          "system-functions.rkt"
          "systemf.rkt")
 
