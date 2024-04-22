@@ -54,15 +54,15 @@
   (syntax-parser
     [(_ fn:id racket-fn)
      #:with spaced-fn ((make-interned-syntax-introducer 'function) #'fn)
-     #:with non-spaced-fn (generate-temporary "non-spaced-wrapper")
      #'(begin
          (define non-spaced-fn racket-fn)
          (define spaced-fn non-spaced-fn)
 
          (hash-set! shen-function-bindings 'fn non-spaced-fn)
 
-         (namespace-set-variable-value! 'fn non-spaced-fn #t kl-namespace)
-         (namespace-set-variable-value! 'fn non-spaced-fn #t shen-namespace))]))
+         ;; (namespace-set-variable-value! 'spaced-fn non-spaced-fn #t kl-namespace)
+         ;; (namespace-set-variable-value! 'spaced-fn non-spaced-fn #t shen-namespace)
+)]))
 
 (define-syntax shen-curry-out
   (make-provide-pre-transformer
