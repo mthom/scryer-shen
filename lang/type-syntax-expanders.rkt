@@ -1,9 +1,8 @@
 #lang racket
 
 (require data/queue
-         (for-syntax (only-in "prolog-syntax.rkt"
-                              expand-shen-defprolog
-                              prolog-syntax-writers)
+         (for-syntax "prolog-syntax.rkt"
+                     "prolog-syntax-expanders.rkt"
                      racket
                      racket/syntax
                      syntax/parse

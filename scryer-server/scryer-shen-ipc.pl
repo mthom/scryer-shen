@@ -74,7 +74,7 @@ pause_or_return(none, Ball, VNs) :-
 pause_or_return(cont(Cont), bind(F,X), VNs) :-
     !,
     function_eval(bind(F,X), VNs),
-    shen_prolog_eval_(Cont, VNs).
+    continue(Cont, VNs).
 pause_or_return(cont(_Cont), return_to_shen(T), VNs0) :-
     variable_labels(T, VNs0, VNs),
     function_eval(return_to_shen(T), VNs).

@@ -7,7 +7,7 @@
          "namespaces.rkt"
          "packages.rkt"
          "syntax-utils.rkt"
-         "type-check.rkt")
+         "type-syntax-expanders.rkt")
 
 (provide add-shen-macro-expander!
          remove-shen-macro-expander!

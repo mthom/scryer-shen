@@ -5,7 +5,9 @@
 
 (require racket/runtime-path)
 
-(require shen/lang/interposition-points
+(require (only-in racket/exn
+                  exn->string)
+         shen/lang/interposition-points
          shen/lang/load
          shen/lang/macros
          shen/lang/namespaces
@@ -19,9 +21,7 @@
                   syntax->shen-prolog-term)
          (only-in shen/lang/system-functions
                   [eval shen:eval])
-         shen/lang/type-check
-         (only-in racket/exn
-                  exn->string)
+         shen/lang/type-syntax-expanders
          syntax/parse
          syntax/stx)
 
@@ -29,7 +29,7 @@
   (define prompt-num 0)
   (open-prolog-debug-gui)
 
-  (parameterize ([current-namespace shen-namespace]
+  (parameterize (;; [current-namespace shen-namespace]
                  [current-readtable shen-readtable])
     (let loop ()
       (with-handlers ([shen-type-check-exn? (lambda (e)
@@ -41,41 +41,9 @@
                               (printf "error: ~a~n" (exn->string e)))])
         (printf "(~a~a) " prompt-num (if (type-check?) '+ '-))
         (set! prompt-num (add1 prompt-num))
-
-        (let ([pre-eval-syntax (detect-prolog-syntax
-                                (expand-shen-form
-                                 (read-syntax)))])
-          (if (type-check?)
-              (syntax-parse pre-eval-syntax
-                [((~literal define) name . _)
-                 (let ([result (shen:eval (syntax->datum pre-eval-syntax))])
-                   (post-load-type-check!)
-                   (shen-printer (syntax->datum #'name) (current-output-port))
-                   (write-string " : " (current-output-port))
-                   (shen-printer (expression-type-check #'(#%prolog-functor fn name))
-                                 (current-output-port)))]
-                [(~or ((~literal datatype) name . _))
-                 (shen:eval (syntax->datum pre-eval-syntax))
-                 (post-load-type-check!)
-                 (fprintf (current-output-port) "~a#type~n" (syntax->datum #'name))]
-                [(~or ((~literal datatype) name . _)
-                      ((~literal defmacro) name . _)
-                      ((~literal defprolog) name . _)
-                      ((~literal package) name . _)
-                      ((~literal prolog?) name . _))
-                 (let ([result (shen:eval (syntax->datum pre-eval-syntax))])
-                   (post-load-type-check!)
-                   (shen-printer (syntax->datum #'name) (current-output-port)))]
-                [_
-                 (let ([type-expr (expression-type-check
-                                   (syntax->shen-prolog-term
-                                    pre-eval-syntax))]
-                       [result (shen:eval (syntax->datum pre-eval-syntax))])
-                   (shen-printer result (current-output-port))
-                   (write-string " : " (current-output-port))
-                   (shen-printer type-expr (current-output-port)))])
-              (let ([result (shen:eval (syntax->datum pre-eval-syntax))])
-                (shen-printer result (current-output-port))))))
+        (shen-expression-eval (detect-prolog-syntax
+                               (expand-shen-form
+                                (read-syntax)))))
       (printf "~n")
       (loop))))
 

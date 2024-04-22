@@ -2,12 +2,12 @@
 
 (require "macros.rkt"
          "prolog.rkt"
-         "prolog-syntax.rkt"
          (only-in "reader.rkt"
                   [read-syntax shen:read-syntax])
+         "prolog-syntax-expanders.rkt"
          syntax/strip-context
          "syntax-utils.rkt"
-         "type-check.rkt")
+         "type-syntax-expanders.rkt")
 
 (provide (protect-out (struct-out shen-type-check-exn))
          expression-type-check

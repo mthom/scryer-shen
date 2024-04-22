@@ -9,8 +9,8 @@
          "prolog.rkt"
          syntax/parse/define
          "systemf.rkt"
-         "type-check.rkt"
-         (for-syntax "prolog-syntax.rkt"
+         "type-syntax-expanders.rkt"
+         (for-syntax "prolog-syntax-expanders.rkt"
                      racket/base
                      racket/function
                      racket/match
@@ -60,8 +60,8 @@
 
          (hash-set! shen-function-bindings 'fn non-spaced-fn)
 
-         ;; (namespace-set-variable-value! 'spaced-fn non-spaced-fn #t kl-namespace)
-         ;; (namespace-set-variable-value! 'spaced-fn non-spaced-fn #t shen-namespace)
+         (namespace-set-variable-value! 'spaced-fn non-spaced-fn #t kl-namespace)
+         (namespace-set-variable-value! 'spaced-fn non-spaced-fn #t shen-namespace)
 )]))
 
 (define-syntax shen-curry-out

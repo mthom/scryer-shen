@@ -6,6 +6,7 @@
 (require shen/lang/expander
          shen/lang/interposition-points
          shen/lang/namespaces
+         shen/lang/prolog-syntax
          shen/lang/reader
          shen/lang/system-function-exports)
 
@@ -28,7 +29,6 @@
 
 (define-syntax-rule (shen-mb body ...)
   (#%module-begin
-   (current-namespace shen-namespace)
    body ...))
 
 (provide (all-from-out shen/lang/interposition-points

@@ -18,7 +18,7 @@
                   package-list)
          (for-syntax syntax/parse)
          syntax/parse/define
-         "type-check.rkt")
+         "type-syntax-expanders.rkt")
 
 (provide (all-defined-out))
 
