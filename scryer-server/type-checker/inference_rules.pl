@@ -18,6 +18,8 @@ type_check(number(X), number) -->
     { value_type(number(X), number) }.
 type_check(symbol(X), symbol) -->
     { value_type(symbol(X), symbol) }.
+type_check(symbol(F), FnT) -->
+    [g(declare(F, FnT))].
 type_check([X|Xs], list(A)) -->
     [g(type_check(X, A)),
      g(type_check(Xs, list(A)))].

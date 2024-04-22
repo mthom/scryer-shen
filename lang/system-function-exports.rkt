@@ -68,6 +68,7 @@
          (all-from-out "failure.rkt")
          destroy
          error
+         fn
          freeze
          set
          tc)

@@ -30,6 +30,12 @@
      #'(begin (type-check? #f) #f)]
     [_ (raise-syntax-error 'tc "expects + or -")]))
 
+(define-syntax fn
+  (syntax-parser
+    [(_ id:id)
+     #:with fs-proc ((make-interned-syntax-introducer 'function) #'id)
+     #'fs-proc]))
+
 (define-syntax destroy
   (syntax-parser
     [(_ id:id)
