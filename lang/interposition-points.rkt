@@ -16,7 +16,7 @@
          "type-syntax-expanders.rkt")
 
 (provide app
-         shen-expression-eval
+         shen-toplevel-eval
          top
          top-interaction)
 
@@ -28,8 +28,7 @@
      (syntax/loc stx (#%app . ((app function proc-var) . args)))]
     [(app . (proc:id . args))
      #:with fs-proc ((make-interned-syntax-introducer 'function) #'proc)
-     (syntax/loc stx
-       (#%app . (fs-proc . args)))]
+     (syntax/loc stx (#%app fs-proc . args))]
     [(app . form)
      (syntax/loc stx (#%app . form))]))
 
@@ -42,7 +41,7 @@
     [(top . id:id)
      (syntax/loc stx (quote id))]))
 
-(define (shen-expression-eval pre-eval-stx)
+(define (shen-toplevel-eval pre-eval-stx)
   (if (type-check?)
       (syntax-parse pre-eval-stx
         [((~literal define) name:id . _)
@@ -56,8 +55,7 @@
          (shen:eval (syntax->datum pre-eval-stx))
          (post-load-type-check!)
          (fprintf (current-output-port) "~a#type~n" (syntax->datum #'name))]
-        [(~or ((~literal datatype) name . _)
-              ((~literal defmacro) name . _)
+        [(~or ((~literal defmacro) name . _)
               ((~literal defprolog) name . _)
               ((~literal package) name . _)
               ((~literal prolog?) name . _))
@@ -78,7 +76,7 @@
 (define-syntax (top-interaction stx)
   (syntax-parse stx
     [(top-interaction . form)
-     #:with expanded-form #`(shen-expression-eval
+     #:with expanded-form #`(shen-toplevel-eval
                              (detect-prolog-syntax
                               (expand-shen-form #'#,#'form)))
      (syntax/loc stx

@@ -1,5 +1,5 @@
 #lang shen
-\*
+
 (define max
   X Y -> X where (> X Y)
   _ Y -> Y)
@@ -47,10 +47,10 @@
   (define abs
     X -> (- X) where (< X 0)
     X -> X))
-*\
 
 (define foo
   X -> (prolog? (return (+ (receive X) (receive X)))))
 
 (define foo-2
   X -> (prolog? (f (receive X) (h (g (receive X) X) (g Y)))))
+

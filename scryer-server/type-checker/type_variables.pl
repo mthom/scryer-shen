@@ -1,4 +1,4 @@
-:- module(type_variables, [type/1, type_eq/2]).
+:- module(type_variables, [exists/1, type/1, type_eq/2]).
 
 :- use_module(library(atts)).
 :- use_module(library(lambda)).
@@ -35,3 +35,12 @@ type_eq(T, U) :-
                 ;  true
                 ),
             TVs).
+
+exists(T) :-
+    (  var(T) ->
+       (  get_atts(T, type_var) ->
+          true
+       ;  put_atts(T, type_equated)
+       )
+    ;  true
+    ).

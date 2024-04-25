@@ -35,7 +35,8 @@ type_check('@v'(X, Y), vector(A)) -->
 type_check(<>, vector(_A)) -->
     [].
 type_check(/.(Var, Body), (A --> B)) -->
-    [g(type_check(Var, A)),
+    [h(exists(A)),
+     h(type_check(Var, A)),
      g(type_check(Body, B))].
 type_check(let(Var, Binding, Body), A) -->
     [g(type_check(Binding, B)),

@@ -41,9 +41,9 @@
                               (printf "error: ~a~n" (exn->string e)))])
         (printf "(~a~a) " prompt-num (if (type-check?) '+ '-))
         (set! prompt-num (add1 prompt-num))
-        (shen-expression-eval (detect-prolog-syntax
-                               (expand-shen-form
-                                (read-syntax)))))
+        (shen-toplevel-eval (detect-prolog-syntax
+                             (expand-shen-form
+                              (read-syntax)))))
       (printf "~n")
       (loop))))
 

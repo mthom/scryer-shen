@@ -94,6 +94,8 @@ affirm_hypothesis(provable(G)) :-
     affirm_hypothesis(G).
 affirm_hypothesis(type_eq(T, U)) :-
     type_eq(T, U).
+affirm_hypothesis(exists(T)) :-
+    exists(T).
 
 succ_hyps(Hyps, h(provable([H|Hs])), SuccHyps) :-
     append([H|Hs], Hyps, SuccHyps).

@@ -22,47 +22,47 @@
                      "syntax-utils.rkt"
                      "types-syntax.rkt"))
 
-(begin-for-syntax
-  (define (generate-variadic-macro-or-wrapper renamed-id assoc wrapper-id
-                                              [new-id (generate-temporary "wrapper-macro")])
-    (case assoc
-      [(#:right) (with-syntax ([wrapper-id wrapper-id]
-                               [new-id new-id]
-                               [renamed-id renamed-id])
-                   (syntax-local-lift-module-end-declaration
-                    #'(define-syntax new-id
-                        (syntax-parser
-                           [(_ a) #'(wrapper-id a)]
-                           [(_ a b) #'(wrapper-id a b)]
-                           [(_ a b . cs) #'(wrapper-id a (new-id b . cs))]
-                           [_:id #''renamed-id]))))
-                 new-id]
-      [(#:left) (with-syntax ([wrapper-id wrapper-id]
-                              [new-id new-id]
-                              [renamed-id renamed-id])
-                  (syntax-local-lift-module-end-declaration
-                   #'(define-syntax new-id
-                        (syntax-parser
-                           [(_ a) #'(wrapper-id a)]
-                           [(_ a b) #'(wrapper-id a b)]
-                           [(_ a b . cs) #'(wrapper-id a (new-id b . cs))]
-                           [_:id #''renamed-id]))))
-                new-id]
-      [else wrapper-id])))
+(define-for-syntax (generate-variadic-macro-or-wrapper renamed-id assoc wrapper-id
+                                                       [new-id (generate-temporary "wrapper-macro")])
+  (case assoc
+    [(#:right) (with-syntax ([wrapper-id wrapper-id]
+                             [new-id new-id]
+                             [renamed-id renamed-id])
+                 (syntax-local-lift-module-end-declaration
+                  #'(define-syntax new-id
+                      (syntax-parser
+                        [(_ a) #'(wrapper-id a)]
+                        [(_ a b) #'(wrapper-id a b)]
+                        [(_ a b . cs) #'(wrapper-id a (new-id b . cs))]
+                        [_:id #''renamed-id]))))
+               new-id]
+    [(#:left) (with-syntax ([wrapper-id wrapper-id]
+                            [new-id new-id]
+                            [renamed-id renamed-id])
+                (syntax-local-lift-module-end-declaration
+                 #'(define-syntax new-id
+                     (syntax-parser
+                       [(_ a) #'(wrapper-id a)]
+                       [(_ a b) #'(wrapper-id a b)]
+                       [(_ a b . cs) #'(wrapper-id a (new-id b . cs))]
+                       [_:id #''renamed-id]))))
+              new-id]
+    [else wrapper-id]))
 
 (define-syntax define-shen-function
   (syntax-parser
     [(_ fn:id racket-fn)
      #:with spaced-fn ((make-interned-syntax-introducer 'function) #'fn)
+     #:with non-spaced-fn (generate-temporary)
      #'(begin
          (define non-spaced-fn racket-fn)
          (define spaced-fn non-spaced-fn)
 
          (hash-set! shen-function-bindings 'fn non-spaced-fn)
 
-         (namespace-set-variable-value! 'spaced-fn non-spaced-fn #t kl-namespace)
-         (namespace-set-variable-value! 'spaced-fn non-spaced-fn #t shen-namespace)
-)]))
+         ;; (namespace-set-variable-value! 'spaced-fn non-spaced-fn #f kl-namespace)
+         ;; (namespace-set-variable-value! 'spaced-fn non-spaced-fn #f shen-namespace)
+         )]))
 
 (define-syntax shen-curry-out
   (make-provide-pre-transformer
@@ -108,9 +108,9 @@
    (lambda (stx modes)
      (syntax-parse stx
        [(_ f:shen-function-out-export ...)
-        #:do [[stx-map
+        #:do [(stx-map
                syntax-local-lift-module-end-declaration
-               #'((define-shen-function f.renamed-id f.func-id) ...)]
+               #'((define-shen-function f.renamed-id f.func-id) ...))
               (stx-map
                syntax-local-lift-expression
                #'((systemf 'f.renamed-id) ...))]
