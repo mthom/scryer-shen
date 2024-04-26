@@ -47,7 +47,7 @@
         [((~literal define) name:id . _)
          (let ([result (shen:eval (syntax->datum pre-eval-stx))])
            (post-load-type-check!)
-           (shen-printer (syntax->datum #'name) (current-output-port))
+           (shen-printer result (current-output-port))
            (write-string " : " (current-output-port))
            (shen-printer (expression-type-check #'(#%prolog-functor fn name))
                          (current-output-port)))]

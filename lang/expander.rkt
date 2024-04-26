@@ -46,7 +46,7 @@
     [(_ fn:id racket-fn)
      #:with spaced-fn ((make-interned-syntax-introducer 'function) #'fn)
      #'(begin
-         (define spaced-fn racket-fn)
+         (define spaced-fn (procedure-rename racket-fn 'fn 'shen))
          (hash-set! shen-function-bindings 'fn spaced-fn))]))
 
 (define-syntax shen-curry-out
@@ -200,8 +200,11 @@
 (define-syntax shen-lambda
   (syntax-parser
     [(shen-lambda lambda-form:shen-lambda-form)
-     #'(lambda (lambda-form.var ...)
-         lambda-form.body-expr)]))
+     #'(procedure-rename (curry
+                          (lambda (lambda-form.var ...)
+                            lambda-form.body-expr))
+                         'anonymous-fn
+                         'shen)]))
 
 (define-syntax shen-let
   (syntax-parser

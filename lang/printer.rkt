@@ -54,6 +54,8 @@
        (write-string " " port)
        (shen-printer elt port))
      (write-string ")" port)]
+    [(? procedure?)
+     (write (object-name datum) port)]
     [(? vector?)
      (write-string "<" port)
      (unless (vector-empty? datum)

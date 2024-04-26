@@ -473,6 +473,7 @@
   (pattern [func-id:id (~optional renamed-id:id #:defaults ([renamed-id #'func-id]))
                        #:arity wrapped-arity:nat
                        (~optional (~seq #:polyadic assoc:shen-op-assoc) #:defaults ([assoc #'#f]))]
+           #:cut
            #:fail-when (and (syntax->datum (attribute assoc))
                             (not (= (syntax->datum (attribute wrapped-arity)) 2)))
            "polyadic functions must have arity 2"
