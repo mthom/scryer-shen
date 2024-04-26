@@ -470,14 +470,14 @@
 
 (define-syntax-class shen-curry-out-export
   #:attributes (func-id renamed-id wrapper assoc)
-  (pattern [(~seq func-id:id (~optional renamed-id:id #:defaults ([renamed-id #'func-id]))
-                  #:arity wrapped-arity:nat
-                  (~optional (~seq #:polyadic assoc:shen-op-assoc) #:defaults ([assoc #'#f])))]
+  (pattern [func-id:id (~optional renamed-id:id #:defaults ([renamed-id #'func-id]))
+                       #:arity wrapped-arity:nat
+                       (~optional (~seq #:polyadic assoc:shen-op-assoc) #:defaults ([assoc #'#f]))]
            #:fail-when (and (syntax->datum (attribute assoc))
                             (not (= (syntax->datum (attribute wrapped-arity)) 2)))
            "polyadic functions must have arity 2"
            #:with wrapper #'(curry (procedure-reduce-arity func-id wrapped-arity)))
-  (pattern [(~seq func-id:id renamed-id:id)]
+  (pattern [func-id:id renamed-id:id]
            #:with wrapper #'(curry func-id)
            #:with assoc #'#f)
   (pattern func-id:id
