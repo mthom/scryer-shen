@@ -64,7 +64,7 @@
   #:attributes (assumption head-args shen-prolog-term)
   (pattern (~seq type-decl:shen-type-declaration)
            #:with assumption #'(#%prolog-functor type-check type-decl.datum type-decl.type)
-           #:with head-args #'(type-decl.datum type-decl.type)
+           #:with head-args  #'(type-decl.datum type-decl.type)
            #:with shen-prolog-term #'(#%prolog-functor type-check type-decl.datum type-decl.type))
   (pattern (~seq type-equation:shen-type-equation)
            #:with assumption #'(#%prolog-functor type-eq type-equation.first-arg type-equation.second-arg)
@@ -72,9 +72,9 @@
            #:with shen-prolog-term #'(#%prolog-functor g (#%prolog-functor type-eq
                                                                            type-equation.first-arg
                                                                            type-equation.second-arg)))
-  (pattern (~var goal shen-prolog-term)
-           #:with assumption #'goal.term
-           #:with head-args #'(goal.term)
+  (pattern (~var goal (shen-prolog-term #:type-datum #f #:untagged-vars #t))
+           #:with assumption #'(#%prolog-functor : user goal.term)
+           #:with head-args  #'goal.term
            #:with shen-prolog-term #'(#%prolog-functor g (#%prolog-functor : user goal.term))))
 
 (define-splicing-syntax-class shen-sequent-assertion-list
@@ -91,7 +91,6 @@
            #:with implicative #'()
            #:with shen-prolog-terms #'((when condition)))
   (pattern (~seq (~datum let) id:shen-var-id datum:expr)
-           #:do [(syntax-property #'id 'bound #t)]
            #:with implicative #'()
            #:with shen-prolog-terms #'((is! id datum)))
   (pattern (~seq assertions:shen-sequent-assertion-list (~literal |;|))

@@ -8,10 +8,10 @@
 
 verify_attributes(Var, Other, []) :-
     (  get_atts(Var, type_equated) ->
-       true
+       put_atts(Var, -type_equated)
     ;  var(Other) ->
        (  get_atts(Other, type_equated) ->
-          true
+          put_atts(Other, -type_equated)
        ;  get_atts(Other, type_var) ->
           (  get_atts(Var, type_var) ->
              Var == Other
@@ -29,12 +29,7 @@ type(T) :-
 type_eq(T, U) :-
     term_variables([T, U], TVs),
     maplist(\TV^put_atts(TV, [type_var, type_equated]), TVs),
-    T = U,
-    maplist(\TV^(  var(TV) ->
-                   put_atts(TV, -type_equated)
-                ;  true
-                ),
-            TVs).
+    T = U.
 
 exists(T) :-
     (  var(T) ->
