@@ -77,10 +77,10 @@ precedent_check(AncestorList, _Hyps, Goal, fix_point(g(Goal))) :-
 
 prove_type_check(g(type_check(X, T)), Hyps, Hyps, X, T) -->
     { term(X) },
-    type_check(X, T).
+    inference_rules:type_check(X, T).
 prove_type_check(discharged(Hyp), PrevHyps, SuccHyps, X, T) -->
     { select(Hyp, PrevHyps, SuccHyps) },
-    provable(Hyp),
+    inference_rules:provable(Hyp),
     [g(type_check(X, T))].
 
 affirm_hypothesis(type_check(X, T)) :-

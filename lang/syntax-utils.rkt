@@ -409,9 +409,10 @@
                                 (lambda (stx) (syntax-property stx 'bound #t))
                                 (generate-temporaries (car (attribute clause.pats))))
            #:with wrapper #'(curry
-                             (lambda (arg-id ...)
-                               (match* (arg-id ...)
-                                 clause.match-clause ...)))))
+                             (letrec ([name (lambda (arg-id ...)
+                                              (match* (arg-id ...)
+                                                clause.match-clause ...))])
+                               name))))
 
 (define-splicing-syntax-class kl-defun
   #:attributes (name wrapper (body-expr 1))
@@ -420,8 +421,9 @@
                   (lambda (stx) (syntax-property stx 'bound #t))
                   #'(args ...))]
            #:with wrapper #'(curry
-                             (lambda (args ...)
-                               body-expr ...))))
+                             (letrec ([name (lambda (args ...)
+                                              body-expr ...)])
+                               name))))
 
 (define-splicing-syntax-class shen-defmacro
   #:attributes (name (pat 1) (clause-expr 1) expander)

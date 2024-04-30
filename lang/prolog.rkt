@@ -5,6 +5,7 @@
                   write-as-prolog-datum)
          (only-in racket/exn
                   exn->string)
+         racket/sandbox
          (only-in "reader.rkt" shen-readtable)
          "scryer-prolog-interface.rkt"
          (prefix-in shen: "system-functions.rkt"))
@@ -13,9 +14,10 @@
          run-prolog-query!)
 
 (define (peek-for-prolog-warning)
-  (when (eq? (peek-char scryer-prolog-in) #\%)
-    (read-line scryer-prolog-in)
-    (peek-for-prolog-warning)))
+  (parameterize ([current-readtable shen-readtable])
+    (when (eq? (peek-char scryer-prolog-in) #\%)
+      (read-line scryer-prolog-in)
+      (peek-for-prolog-warning))))
 
 (define (add-prolog-predicate! iso-prolog-code)
   (fprintf scryer-prolog-log-out "?- ")
@@ -25,14 +27,22 @@
   (fprintf scryer-prolog-log-out "?- ")
   (fprintf scryer-prolog-out "shen_prolog_eval((~a)).~n" iso-prolog-query)
 
-  (with-handlers ([(const #t) (lambda (e)
-                                (printf "prolog error on query ~a: ~a~n" iso-prolog-query (exn->string e))
-                                (read-char scryer-prolog-in) ;; read trailing newline
-                                #f)])
+  (with-handlers ([exn:fail:resource? (lambda (e)
+                                        (printf "prolog query time limit exceeded\n")
+                                        (interrupt-scryer-repl)
+                                        (parameterize ([current-readtable shen-readtable])
+                                          (read scryer-prolog-in))
+                                        (read-char scryer-prolog-in) ;; read trailing newline
+                                        #f)]
+                  [exn:fail? (lambda (e)
+                               (printf "prolog error on query ~a: ~a~n" iso-prolog-query (exn->string e))
+                               (read-char scryer-prolog-in) ;; read trailing newline
+                               #f)])
     (let loop ()
       (peek-for-prolog-warning)
       (match (parameterize ([current-readtable shen-readtable])
-               (shen:eval (read scryer-prolog-in)))
+               (shen:eval (with-limits 2 #f
+                            (read scryer-prolog-in))))
         [(list fn-call continue?)
          (read-char scryer-prolog-in) ;; read trailing newline
          (if continue?
@@ -41,4 +51,4 @@
                (fprintf scryer-prolog-out ".~n")
                (loop))
              fn-call)]
-        [_ #f]))))
+        [_  #f]))))

@@ -6,6 +6,7 @@
 
 (provide add-multiplexed-input-port-pipe!
          add-multiplexed-output-port-pipe!
+         interrupt-scryer-repl
          scryer-prolog-err
          scryer-prolog-in
          scryer-prolog-out)
@@ -14,7 +15,11 @@
 (define-runtime-path scryer-shen-toplevel "../scryer-server/scryer-shen-toplevel.pl")
 
 (define-values (scryer-prolog-process in out err)
-  (subprocess #f #f #f scryer-prolog-path "-f" scryer-shen-toplevel))
+  (subprocess #f #f #f 'new scryer-prolog-path "-f" scryer-shen-toplevel))
+
+(define (interrupt-scryer-repl)
+  ;; since the force? argument is #f, send Scryer Prolog an interrupt
+  (subprocess-kill scryer-prolog-process #f))
 
 (struct multiplexed-input-port [name wrapped-in child-outs]
   #:property prop:input-port (struct-field-index wrapped-in))
@@ -26,7 +31,7 @@
                       (lambda (bstr)
                         (unless (eq? (subprocess-status scryer-prolog-process) 'running)
                           (error "Scryer Prolog is no longer running!"))
-                        (define result (read-bytes! bstr in))
+                        (define result (read-bytes-avail! bstr in))
                         (for ([pipe (in-gvector child-outs)])
                           (write-bytes bstr pipe))
                         result)

@@ -3,10 +3,10 @@
 (require "bindings.rkt"
          "macros.rkt"
          "namespaces.rkt"
-         racket/stxparam
          "packages.rkt"
          "pairs.rkt"
          "prolog.rkt"
+         racket/stxparam
          syntax/parse/define
          "systemf.rkt"
          "type-syntax-expanders.rkt"
