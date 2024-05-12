@@ -22,8 +22,9 @@ continue(_, _) :-
     format("[false false]~n", []).
 
 write_error_to_sexpr(error(Error, Src)) :-
-    format("[(error \"error(~w, ~w)\") false]~n", [Error, Src]),
-    false.
+    format("[(error \"error(~w, ~w)\") false]~n", [Error, Src]).
+write_error_to_sexpr(type_check_error(Error)) :-
+    format("[(error \"type_check_error(~w)\"), false]~n", [Error]).
 
 eq_list_match(L, [L=V1|_], V1).
 eq_list_match(L, [_|VNs], V) :-

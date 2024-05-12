@@ -3,6 +3,7 @@
                          start_proof/3]).
 
 :- use_module(library(dcgs)).
+:- use_module(library(iso_ext), [call_with_inference_limit/3]).
 :- use_module(library(lambda)).
 :- use_module(library(lists)).
 
@@ -43,13 +44,19 @@ start_proof(Hyps, type_check(X, T), ProofTree) :-
     maplist(attribute_hyp, Hyps),
     term(X),
     Goal = (Hyps, X, T)+\Infs^ProofTree^prove(Infs, [], Hyps, g(type_check(X, T)), ProofTree),
-    depth_iterated_proof(Goal, ProofTree, Status, 32),
-    (  Status = false,
+    call_with_inference_limit(
+        depth_iterated_proof(Goal, ProofTree, Status, 32),
+        200_000,
+        R
+    ),
+    (  R == inference_limit_exceeded ->
+       throw(type_check_error(inference_limit_exceeded))
+    ;  Status = false,
        !,
        false
     ;  Status = true ->
        true
-    ;  throw(Status)
+    ;  throw(type_check_error(Status))
     ).
 
 depth_iterated_proof(Goal, ProofTree, Status, Inferences) :-
@@ -61,7 +68,7 @@ depth_iterated_proof(Goal, ProofTree, Status, Inferences) :-
        NextInferences is 2 * Inferences,
        (  maximum_allowed_inferences(MaxInferences),
           NextInferences >= MaxInferences,
-          Status = inference_limit_exceeded
+          Status = depth_inference_limit_exceeded
        ;  depth_iterated_proof(Goal, ProofTree, Status, NextInferences)
        )
     ;  Status = false % if the proof failed within the inference
