@@ -6,5 +6,6 @@ doc/
 **.sxref
 
 dist/
+shen
 
 .DS_Store
