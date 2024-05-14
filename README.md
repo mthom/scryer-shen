@@ -37,9 +37,16 @@ those found in programming languages like Agda and Lean.
 scryer-shen can be run in the Racket REPL (for
 `#lang shen` modules) or compiled to an executable using
 
-```
-> raco setup
-> raco exe --cs -o shen ++lib racket/lang/reader repl.rkt
+```shell
+# Install [GNU Make](https://www.gnu.org/software/make/#download)
+# Install [racket](https://download.racket-lang.org/)
+# before 
+# - logging into a shell terminal, and
+# - executing the following commands
+# from cloned `scryer-shen` project root directory
+# before passing `ensure-scryer-shen-executable-availability` target to make binary
+# so that making `shen` executable is made available
+make ensure-scryer-shen-executable-availability
 ```
 
 The scryer-prolog executable must be copied to
