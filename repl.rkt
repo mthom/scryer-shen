@@ -29,8 +29,7 @@
   (define prompt-num 0)
   (open-prolog-debug-gui)
 
-  (parameterize (;; [current-namespace shen-namespace]
-                 [current-readtable shen-readtable])
+  (parameterize ([current-readtable shen-readtable])
     (let loop ()
       (with-handlers ([shen-type-check-exn? (lambda (e)
                                               (printf "type error\n"))]
@@ -41,9 +40,9 @@
                               (printf "error: ~a~n" (exn->string e)))])
         (printf "(~a~a) " prompt-num (if (type-check?) '+ '-))
         (set! prompt-num (add1 prompt-num))
-        (shen-toplevel-eval (detect-prolog-syntax
-                             (expand-shen-form
-                              (read-syntax)))))
+        (load-shen-form (detect-prolog-syntax
+                         (expand-shen-form
+                          (read-syntax)))))
       (printf "~n")
       (loop))))
 

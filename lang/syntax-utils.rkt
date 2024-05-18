@@ -100,14 +100,13 @@
                                                       #:untagged-vars [untagged-vars? #t])
   #:attributes ((type 1))
   #:datum-literals (-->)
-  (pattern (~seq (~var t1 (shen-prolog-term #:type-datum type-datum?
-                                            #:untagged-vars untagged-vars?))
-                 (~seq --> (~var t2 (shen-prolog-term #:type-datum type-datum?
-                                                      #:untagged-vars untagged-vars?))) ...+)
-           #:with (type ...) #'(t1.term t2.term ...))
-  (pattern (~seq --> (~var t (shen-prolog-term #:type-datum type-datum?
-                                               #:untagged-vars untagged-vars?)))
-           #:with (type ...) #'(t.term)))
+  (pattern (~seq --> t)
+           #:declare t (shen-prolog-term #:type-datum type-datum? #:untagged-vars untagged-vars?)
+           #:with (type ...) #'(t.term))
+  (pattern (~seq (~and t1 (~not -->)) (~seq --> t2) ...+)
+           #:declare t1 (shen-prolog-term #:type-datum type-datum? #:untagged-vars untagged-vars?)
+           #:declare t2 (shen-prolog-term #:type-datum type-datum? #:untagged-vars untagged-vars?)
+           #:with (type ...) #'(t1.term t2.term ...)))
 
 (define local-pattern-variables (make-parameter #'()))
 

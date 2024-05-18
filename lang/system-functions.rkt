@@ -5,7 +5,6 @@
                   [foldr r:foldr]
                   [map r:map]
                   [eval r:eval]
-                  [load r:load]
                   [vector r:vector])
          (only-in racket/exn
                   exn->string)

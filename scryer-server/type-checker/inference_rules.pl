@@ -74,8 +74,12 @@ provable(type_check('@v'(X, Y), vector(A))) -->
 
 :- dynamic(declare/2).
 
+declare(load, (string --> symbol)).
 declare(tc, (symbol --> boolean)).
 declare(+, (number --> (number --> number))).
 declare(-, (number --> (number --> number))).
 declare(*, (number --> (number --> number))).
 declare(/, (number --> (number --> number))).
+declare(hd, (list(A) --> A)).
+declare(tl, (list(A) --> list(A))).
+declare(map, ((A --> B) --> (list(A) --> list(B)))).
