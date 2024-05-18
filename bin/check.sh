@@ -16,6 +16,8 @@ function check_requirements {
 
         return 1
     fi
+
+      printf '%s.%s' 'Requirements (`scryer-prolog`, `raco`) appear to be satisfied' $'\n'
 }
 
 set +Eeu

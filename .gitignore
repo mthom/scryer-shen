@@ -5,6 +5,9 @@ doc/
 **.rktd
 **.sxref
 
+install-rust-toolchain.sh
+
 dist/
+shen
 
 .DS_Store
