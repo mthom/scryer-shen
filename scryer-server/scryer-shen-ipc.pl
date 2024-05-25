@@ -61,8 +61,8 @@ matching_variable_labels_loop(TermVars, NumVars0, Min, VNs0, VNs) :-
     (   Matches == [] ->
         append(VNs0, VNs1, VNs)
     ;   list_max(Matches, Max),
-        Max1 is Max + 1,
-        matching_variable_labels_loop(TermVars, NumVars0, Max1, VNs0, VNs)
+        % Max1 is Max + 1,
+        matching_variable_labels_loop(TermVars, NumVars0, Max, VNs0, VNs)
     ).
 
 variable_labels(Term, VNs0, VNs) :-
@@ -84,7 +84,7 @@ pause_or_return(cont(_Cont), type_check_return_to_shen(T), VNs0) :-
     function_eval(type_check_return_to_shen(T), VNs).
 
 function_eval(bind(F,X), VNs) :-
-    functor_sexpr(VNs, "(~w ", F, SExpr),
+    functor_sexpr(VNs, "[~w ", F, SExpr),
     format("[~s true]~n", [SExpr]), % write to scryer-shen which is listening to stdout ...
     read(X).                        % .. and block until the result is read back from scryer-shen.
 function_eval(return_to_shen(T), VNs) :-
@@ -108,11 +108,20 @@ end_bracket("(~w ", ")").
 end_bracket("[~w ", "]").
 end_bracket("[#%type-functor ~w ", "]").
 
+value_wrapper(?).
+value_wrapper(number).
+value_wrapper(string).
+value_wrapper(symbol).
+
 functor_args_sexpr(VNs, FunctorRep, '.', [Car, Cdr], SExpr) :-
     !,
     functor_sexpr(VNs, FunctorRep, Car, CarSExpr),
     functor_sexpr(VNs, FunctorRep, Cdr, CdrSExpr),
-    phrase(format_("[~s | ~s]", [CarSExpr, CdrSExpr]), SExpr).
+    phrase(format_("[cons ~s ~s]", [CarSExpr, CdrSExpr]), SExpr).
+functor_args_sexpr(VNs, FunctorRep, ValueWrapper, [Value], SExpr) :-
+    value_wrapper(ValueWrapper),
+    !,
+    functor_sexpr(VNs, FunctorRep, Value, SExpr).
 functor_args_sexpr(_VNs, _FunctorRep, TF, [], SExpr) :-
     phrase(format_("~w", [TF]), SExpr).
 functor_args_sexpr(VNs, FunctorRep, TF, [TArg|TArgs], SExpr) :-

@@ -87,9 +87,10 @@
 
 (define-splicing-syntax-class shen-sequent-condition
   #:attributes (implicative shen-prolog-terms)
-  (pattern (~seq (~datum if) condition:expr)
+  (pattern (~seq (~datum if) condition)
+           #:declare condition (shen-prolog-term #:type-datum #f #:untagged-vars #t)
            #:with implicative #'()
-           #:with shen-prolog-terms #'((when condition)))
+           #:with shen-prolog-terms #'((#%prolog-functor g (#%prolog-functor shift-bind condition.term))))
   (pattern (~seq (~datum let) id:shen-var-id datum:expr)
            #:with implicative #'()
            #:with shen-prolog-terms #'((is! id datum)))

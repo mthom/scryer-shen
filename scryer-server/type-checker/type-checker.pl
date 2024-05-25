@@ -77,6 +77,9 @@ depth_iterated_proof(Goal, ProofTree, Status, Inferences) :-
                       % immediately
     ).
 
+
+shift_bind(G) :- cont:shift(bind(G, F)), F \== false.
+
 precedent_check(_AncestorList, Hyps, Goal, assumed(g(Goal))) :-
     member(Goal, Hyps).
 precedent_check(AncestorList, _Hyps, Goal, fix_point(g(Goal))) :-
