@@ -30,35 +30,30 @@
 
 (define-splicing-syntax-class shen-type-declaration
   #:attributes (datum type)
-  (pattern (~seq (~var num (shen-prolog-term #:untagged-vars #t))
-                 (~literal :)
-                 (~literal number))
+  (pattern (~seq var (~literal :) (~literal number))
            #:do [(tag-functor-syntax! #'num #'number)]
-           #:with datum #'(#%prolog-functor number num.term)
+           #:with var-term (syntax->shen-prolog-term #'var #t #t)
+           #:with datum #'(#%prolog-functor number var-term)
            #:with type  #'number)
-  (pattern (~seq (~var str (shen-prolog-term #:untagged-vars #t))
-                 (~literal :)
-                 (~literal string))
+  (pattern (~seq str (~literal :) (~literal string))
            #:do [(tag-functor-syntax! #'str #'string)]
-           #:with datum #'(#%prolog-functor string str.term)
+           #:with str-term (syntax->shen-prolog-term #'str #t #t)
+           #:with datum #'(#%prolog-functor string str-term)
            #:with type  #'string)
-  (pattern (~seq (~var sym (shen-prolog-term #:untagged-vars #t))
-                 (~literal :)
-                 (~literal symbol))
+  (pattern (~seq sym (~literal :) (~literal symbol))
            #:do [(tag-functor-syntax! #'sym #'symbol)]
-           #:with datum #'(#%prolog-functor symbol sym.term)
+           #:with sym-term (syntax->shen-prolog-term #'sym #t #t)
+           #:with datum #'(#%prolog-functor symbol sym-term)
            #:with type  #'symbol)
-  (pattern (~seq (~var datum-term (shen-prolog-term #:untagged-vars #t))
-                 (~literal :)
-                 (~var type-term (shen-prolog-term #:type-datum #f)))
-           #:with datum #'datum-term.term
-           #:with type  #'type-term.term))
+  (pattern (~seq datum-term (~literal :) type-term)
+           #:with datum (syntax->shen-prolog-term #'datum-term #t #t)
+           #:with type  (syntax->shen-prolog-term #'type-term #f)))
 
 (define-splicing-syntax-class shen-type-equation
   #:attributes (first-arg second-arg)
-  (pattern (~seq (~var first-arg  (shen-prolog-term #:type-datum #f #:untagged-vars #t))
-                 (~literal ~)
-                 (~var second-arg (shen-prolog-term #:type-datum #f #:untagged-vars #t)))))
+  (pattern (~seq first-arg-term (~literal ~) second-arg-term)
+           #:with first-arg  (syntax->shen-prolog-term #'first-arg-term  #f #t)
+           #:with second-arg (syntax->shen-prolog-term #'second-arg-term #f #t)))
 
 (define-splicing-syntax-class shen-sequent-assertion
   #:attributes (assumption head-args shen-prolog-term)
@@ -72,10 +67,11 @@
            #:with shen-prolog-term #'(#%prolog-functor g (#%prolog-functor type-eq
                                                                            type-equation.first-arg
                                                                            type-equation.second-arg)))
-  (pattern (~var goal (shen-prolog-term #:type-datum #f #:untagged-vars #t))
-           #:with assumption #'(#%prolog-functor : user goal.term)
-           #:with head-args  #'goal.term
-           #:with shen-prolog-term #'(#%prolog-functor g (#%prolog-functor : user goal.term))))
+  (pattern goal
+           #:with goal-term (syntax->shen-prolog-term #'goal #f #t)
+           #:with assumption #'(#%prolog-functor : user goal-term)
+           #:with head-args  #'goal-term
+           #:with shen-prolog-term #'(#%prolog-functor g (#%prolog-functor : user goal-term))))
 
 (define-splicing-syntax-class shen-sequent-assertion-list
   #:attributes ((assumption 1) (shen-prolog-term 1))
@@ -87,10 +83,10 @@
 
 (define-splicing-syntax-class shen-sequent-condition
   #:attributes (implicative shen-prolog-terms)
-  (pattern (~seq (~datum if) condition)
-           #:declare condition (shen-prolog-term #:type-datum #f #:untagged-vars #t)
+  (pattern (~seq (~datum if) condition-term)
+           #:with condition (syntax->shen-prolog-term #'condition-term #f #t)
            #:with implicative #'()
-           #:with shen-prolog-terms #'((#%prolog-functor g (#%prolog-functor shift-bind condition.term))))
+           #:with shen-prolog-terms #'((#%prolog-functor g (#%prolog-functor shift-bind condition))))
   (pattern (~seq (~datum let) id:shen-var-id datum:expr)
            #:with implicative #'()
            #:with shen-prolog-terms #'((is! id datum)))
