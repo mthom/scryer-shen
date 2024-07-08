@@ -46,7 +46,7 @@ start_proof(Hyps, type_check(X, T), ProofTree) :-
     Goal = (Hyps, X, T)+\Infs^ProofTree^prove(Infs, [], Hyps, g(type_check(X, T)), ProofTree),
     call_with_inference_limit(
         depth_iterated_proof(Goal, ProofTree, Status, 32),
-        200_000,
+        50_000,
         R
     ),
     (  R == inference_limit_exceeded ->

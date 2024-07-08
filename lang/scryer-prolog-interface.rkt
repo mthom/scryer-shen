@@ -6,7 +6,6 @@
 
 (provide add-multiplexed-input-port-pipe!
          add-multiplexed-output-port-pipe!
-         interrupt-scryer-repl
          scryer-prolog-err
          scryer-prolog-in
          scryer-prolog-out)
@@ -16,10 +15,6 @@
 
 (define-values (scryer-prolog-process in out err)
   (subprocess #f #f #f 'new scryer-prolog-path "-f" scryer-shen-toplevel))
-
-(define (interrupt-scryer-repl)
-  ;; since the force? argument is #f, send Scryer Prolog an interrupt
-  (subprocess-kill scryer-prolog-process #f))
 
 (struct multiplexed-input-port [name wrapped-in child-outs]
   #:property prop:input-port (struct-field-index wrapped-in))

@@ -7,6 +7,6 @@
 shen_prolog_eval(Query, VNs) :-
     catch(continue(Query, VNs),
           E,
-          (  write_error_to_sexpr(E),
+          (  write_error(E),
              false
           )).
