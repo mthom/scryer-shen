@@ -33,6 +33,10 @@
     (let loop ()
       (peek-for-prolog-warning)
       (match (shen:eval (read-iso-prolog-term scryer-prolog-in))
+        [(list (list 'type-functor type))
+         (write-as-prolog-datum type scryer-prolog-out)
+         (fprintf scryer-prolog-out ".~n")
+         type]
         [(list fn-call continue?)
          ;; (read-char scryer-prolog-in) ;; read trailing newline
          (if continue?

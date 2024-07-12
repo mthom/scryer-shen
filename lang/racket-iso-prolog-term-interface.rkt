@@ -25,7 +25,7 @@
          "!"
          "[]"
          "{}"
-         graphic-char
+         (repetition 1 +inf.0 graphic-char)
          single-quoted))
 
 (define-lex-abbrev variable
@@ -53,50 +53,12 @@
   (define line (read-line port))
   (iso-prolog-term->shen-expr (parse-to-datum (apply-tokenizer-maker make-tokenizer line))))
 
-#|
-(define (iso-prolog-atom->s-expr-atom iso-prolog-atom)
-  (if (char-lower-case? (string-ref (symbol->string iso-prolog-atom) 0))
-      (string->symbol (string-replace (symbol->string iso-prolog-atom) "_" "-"))
-      iso-prolog-atom))
-|#
-
-#|
-(define (s-expr->iso-prolog-term s-expr)
-  (define output-port (open-output-string))
-
-  (let loop ([s-expr s-expr])
-    (match s-expr
-      [(list 'quote (list* term terms ... tail))
-       (write-string "[" output-port)
-       (loop term)
-       (for ([term (in-list terms)])
-         (write-string ", " output-port)
-         (loop term))
-       (unless (empty? tail)
-         (write-string " | " output-port)
-         (loop tail))
-       (write-string "]" output-port)]
-      [(list (? symbol? atom) term terms ...)
-       (write atom output-port)
-       (write-string "(" output-port)
-       (loop term)
-       (for ([term (in-list terms)])
-         (write-string ", " output-port)
-         (loop term))
-       (write-string ")" output-port)]
-      [(or (? number?) (? symbol?) (? string?))
-       (write s-expr output-port)]
-      [(cons a d)
-       (write-string "'.'(" output-port)
-       (loop a)
-       (write-string ", " output-port)
-       (loop d)
-       (write-string ")" output-port)]
-      [empty
-       (write-string "[]" output-port)]))
-
-  (get-output-string output-port))
-|#
+(define (un-bar-bracket atom)
+  (match (symbol->string atom)
+    [(and (var string) (or "-" "->" "-->")) string]
+    [(regexp #rx"^|(.)*|$" (list "|" string "|"))
+     (un-bar-bracket (string->symbol string))]
+    [string (string-replace string "_" "-")]))
 
 (define (iso-prolog-term->shen-expr term-tree)
   (define output-port (open-output-string))
@@ -105,9 +67,9 @@
     (match term-tree
       [(list 'term inner-term)
        (write-shen-term inner-term)]
-      [(list 'atom '|[]|)
-       (write-string "[]" output-port)]
-      [(list (or 'atom 'variable 'number 'string) atom)
+      [(list 'atom atom)
+       (write-string (un-bar-bracket atom) output-port)]
+      [(list (or 'variable 'number 'string) atom)
        (write atom output-port)]
       [(list 'clause (list 'atom '|'.'|) a d)
        (write-string "[" output-port)

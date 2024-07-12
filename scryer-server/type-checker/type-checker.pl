@@ -115,7 +115,7 @@ succ_hyps(Hyps, g(_),    Hyps).
 
 succ_ancestor_list(g(type_check(X, T)), AncestorList, [g(type_check(X,T)) | AncestorList]).
 succ_ancestor_list(Discharged, AncestorList, AncestorList) :-
-    \=(Discharged, g(type_check(_X, _T))).
+    Discharged \= g(type_check(_X, _T)).
 
 chain_proof([], _SuccIs, _AL, _SuccAL, _Hs, _SuccHs, _SubTs, _SuccSubTs, _Cs) -->
     { assert_inf_limit_exceeded,

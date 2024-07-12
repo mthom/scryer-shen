@@ -88,6 +88,17 @@ pause_or_return(cont(_Cont), type_check_return_to_shen(T), VNs0) :-
     variable_labels(T, VNs0, VNs),
     function_eval(type_check_return_to_shen(T), VNs).
 
+type_functor(T, T) :-
+    (  atomic(T)
+    ;  var(T)
+    ),
+    !.
+type_functor([T|Ts], [U|Us]) :-
+    maplist(type_functor, [T|Ts], [U|Us]).
+type_functor(T, [F | Ts]) :-
+    T =.. [F | Ts0],
+    maplist(type_functor, Ts0, Ts).
+
 function_eval(bind(F,X), VNs) :-
     write_canonical_term_wq([[F], true], VNs),
     nl,
@@ -100,7 +111,8 @@ function_eval(return_to_shen(T), VNs) :-
     % functor_sexpr(VNs, "[~w ", T, SExpr),
     % format("[~s false]~n", [SExpr]).
 function_eval(type_check_return_to_shen(T), VNs) :-
-    write_canonical_term_wq([['#%type-functor', T], false], VNs),
+    type_functor(T, TF),
+    write_canonical_term_wq([[type_functor, TF]], VNs),
     nl.
     % functor_sexpr(VNs, "[#%type-functor ~w ", T, SExpr),
     % format("[~s false]~n", [SExpr]).
