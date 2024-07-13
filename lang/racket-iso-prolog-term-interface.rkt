@@ -2,6 +2,7 @@
 
 (require brag/support
          "iso-prolog-bnf.rkt"
+         racket/generator
          (only-in "reader.rkt" shen-readtable))
 
 (provide read-iso-prolog-term)
@@ -29,7 +30,8 @@
          single-quoted))
 
 (define-lex-abbrev variable
-  (concatenation upper-case (repetition 0 +inf.0 (union alphabetic numeric))))
+  (concatenation (union upper-case "_")
+                 (repetition 0 +inf.0 (union alphabetic numeric))))
 
 (define-lex-abbrev quoted-string
   (concatenation "\"" any-string "\""))
@@ -54,29 +56,60 @@
   (iso-prolog-term->shen-expr (parse-to-datum (apply-tokenizer-maker make-tokenizer line))))
 
 (define (un-bar-bracket atom)
+  (define (unquote-string string)
+    (substring string 1 (sub1 (string-length string))))
+
   (match (symbol->string atom)
     [(and (var string) (or "-" "->" "-->")) string]
-    [(regexp #rx"^|(.)*|$" (list "|" string "|"))
-     (un-bar-bracket (string->symbol string))]
+    [(and (var string) (regexp #rx"^'.*'$"))
+     (unquote-string string)]
     [string (string-replace string "_" "-")]))
 
 (define (iso-prolog-term->shen-expr term-tree)
   (define output-port (open-output-string))
+  
+  (define (subterms term)
+    (for/list ([term (in-generator
+                      (let loop ([term term])
+                        (match term
+                          [(list 'term term)
+                           (loop term)]
+                          [(list 'atom '|[]|)
+                           (void)]
+                          [(list 'clause
+                                 (list 'atom '|'.'|)
+                                 a d)
+                           (yield a)
+                           (loop d)]
+                          [term (yield term)])))])
+      term))
 
   (let write-shen-term ([term-tree term-tree])
     (match term-tree
       [(list 'term inner-term)
        (write-shen-term inner-term)]
-      [(list 'atom atom)
+      [(list (or 'atom 'variable) atom)
        (write-string (un-bar-bracket atom) output-port)]
-      [(list (or 'variable 'number 'string) atom)
-       (write atom output-port)]
-      [(list 'clause (list 'atom '|'.'|) a d)
+      [(list (or 'number 'string) datum)
+       (write datum output-port)]
+      [(list 'clause (list 'atom '|'.'|)
+             (list 'term (list 'atom '|'.'|))
+             a d)
        (write-string "[" output-port)
        (write-shen-term a)
        (write-string " | " output-port)
        (write-shen-term d)
        (write-string "]" output-port)]
+      [(and (var term)
+            (list 'clause (list 'atom '|'.'|)
+                  a d))
+       (let ([subterms (subterms term)])
+         (write-string "(" output-port)
+         (write-shen-term (car subterms))
+         (for ([subterm (in-list (cdr subterms))])
+           (write-string " " output-port)
+           (write-shen-term subterm))
+         (write-string ")" output-port))]
       [(list 'clause term terms ...)
        (write-string "(" output-port)
        (write-shen-term term)
@@ -99,7 +132,7 @@
        (for ([term (in-list terms)])
          (write-string " " output-port)
          (write-shen-term term))
-       (write-string "]" output-port)]))
+      (write-string "]" output-port)]))
 
   (parameterize ([current-readtable shen-readtable])
     (read (open-input-string (get-output-string output-port)))))

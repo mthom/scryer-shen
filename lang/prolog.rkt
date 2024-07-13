@@ -32,17 +32,16 @@
                                #f)])
     (let loop ()
       (peek-for-prolog-warning)
-      (match (shen:eval (read-iso-prolog-term scryer-prolog-in))
+      (match (read-iso-prolog-term scryer-prolog-in)
         [(list (list 'type-functor type))
-         (write-as-prolog-datum type scryer-prolog-out)
-         (fprintf scryer-prolog-out ".~n")
          type]
-        [(list fn-call continue?)
-         ;; (read-char scryer-prolog-in) ;; read trailing newline
-         (if continue?
-             (begin
-               (write-as-prolog-datum (shen:eval fn-call) scryer-prolog-out)
-               (fprintf scryer-prolog-out ".~n")
-               (loop))
-             fn-call)]
-        [_ #f]))))
+        [term
+         (match (shen:eval term)
+           [(list fn-call continue?)
+            (if continue?
+                (begin
+                  (write-as-prolog-datum (shen:eval fn-call) scryer-prolog-out)
+                  (fprintf scryer-prolog-out ".~n")
+                  (loop))
+                fn-call)]
+           [_ #f])]))))

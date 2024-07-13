@@ -54,7 +54,8 @@
   (define type-query
     #`((#%prolog-functor : type-checker
                          (#%prolog-functor start-proof []
-                                           (#%prolog-functor type-check #,pre-eval-syntax
+                                           (#%prolog-functor type-check
+                                                             #,pre-eval-syntax
                                                              ResultType)
                                            _))
        (type-check-return ResultType)))
@@ -62,7 +63,8 @@
   (define query-string (eval-syntax (expand-shen-prolog-query type-query)))
   (define query-result (run-prolog-query! query-string))
 
-  (or query-result (raise (shen-type-check-exn "failed" (current-continuation-marks)))))
+  (or query-result
+      (raise (shen-type-check-exn "failed" (current-continuation-marks)))))
 
 (define (load-shen-form pre-eval-stx)
   (syntax-parse pre-eval-stx
@@ -73,7 +75,7 @@
              (post-load-type-check!)
              (shen-printer result (current-output-port))
              (write-string " : " (current-output-port))
-             (shen-printer (expression-type-check #'(#%prolog-functor fn name))
+             (type-printer (expression-type-check #'(#%prolog-functor fn name))
                            (current-output-port)))
            (shen-printer result (current-output-port))))]
     [((~literal datatype) name:id . _)
@@ -95,7 +97,7 @@
            [result (shen:eval (syntax->datum pre-eval-stx))])
        (shen-printer result (current-output-port))
        (write-string " : " (current-output-port))
-       (shen-printer type-expr (current-output-port)))]
+       (type-printer type-expr (current-output-port)))]
     [_
      (shen-printer (shen:eval (syntax->datum pre-eval-stx)) (current-output-port))]))
 

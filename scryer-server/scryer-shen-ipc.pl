@@ -88,72 +88,37 @@ pause_or_return(cont(_Cont), type_check_return_to_shen(T), VNs0) :-
     variable_labels(T, VNs0, VNs),
     function_eval(type_check_return_to_shen(T), VNs).
 
-type_functor(T, T) :-
+list_dot_functor([], []).
+list_dot_functor([T|Ts], '.'(T, Us)) :-
+    list_dot_functor(Ts, Us).
+
+shen_functor(T, T) :-
     (  atomic(T)
     ;  var(T)
     ),
     !.
-type_functor([T|Ts], [U|Us]) :-
-    maplist(type_functor, [T|Ts], [U|Us]).
-type_functor(T, [F | Ts]) :-
-    T =.. [F | Ts0],
-    maplist(type_functor, Ts0, Ts).
+shen_functor([T|Ts], '.'('.', U, Us)) :-
+    shen_functor(T, U),
+    shen_functor(Ts, Us),
+    !.
+shen_functor(T, '.'(F, Vs)) :-
+    T =.. [F | Ts],
+    maplist(shen_functor, Ts, Us),
+    list_dot_functor(Us, Vs).
 
 function_eval(bind(F,X), VNs) :-
-    write_canonical_term_wq([[F], true], VNs),
+    shen_functor(F, SF),
+    write_canonical_term_wq([SF, true], VNs), % write to scryer-shen
+                                              % which is listening to
+                                              % stdout ...
     nl,
-    % functor_sexpr(VNs, "[~w ", F, SExpr),
-    % format("[~s true]~n", [SExpr]), % write to scryer-shen which is listening to stdout ...
-    read(X).                          % .. and block until the result is read back from scryer-shen.
+    read(X).                          % .. and block until the result
+                                      % is read back from scryer-shen.
 function_eval(return_to_shen(T), VNs) :-
-    write_canonical_term_wq([[T], false], VNs),
+    shen_functor(T, TF),
+    write_canonical_term_wq([TF, false], VNs),
     nl.
-    % functor_sexpr(VNs, "[~w ", T, SExpr),
-    % format("[~s false]~n", [SExpr]).
 function_eval(type_check_return_to_shen(T), VNs) :-
-    type_functor(T, TF),
+    shen_functor(T, TF),
     write_canonical_term_wq([[type_functor, TF]], VNs),
     nl.
-    % functor_sexpr(VNs, "[#%type-functor ~w ", T, SExpr),
-    % format("[~s false]~n", [SExpr]).
-
-/*
-functor_sexpr(VNs, FunctorRep, T, SExpr) :-
-    (   var(T) ->
-        write_term_to_chars(T, [variable_names(VNs)], SExpr)
-    ;   partial_string(T),
-        partial_string_tail(T, []) ->
-        phrase(format_("\"~s\"", [T]), SExpr)
-    ;   T =.. [TF | TArgs],
-        functor_args_sexpr(VNs, FunctorRep, TF, TArgs, SExpr)
-    ).
-
-end_bracket("(~w ", ")").
-end_bracket("[~w ", "]").
-end_bracket("[#%type-functor ~w ", "]").
-
-value_wrapper(?).
-value_wrapper(number).
-value_wrapper(string).
-value_wrapper(symbol).
-
-functor_args_sexpr(VNs, FunctorRep, '.', [Car, Cdr], SExpr) :-
-    !,
-    functor_sexpr(VNs, FunctorRep, Car, CarSExpr),
-    functor_sexpr(VNs, FunctorRep, Cdr, CdrSExpr),
-    phrase(format_("[cons ~s ~s]", [CarSExpr, CdrSExpr]), SExpr).
-functor_args_sexpr(VNs, FunctorRep, ValueWrapper, [Value], SExpr) :-
-    value_wrapper(ValueWrapper),
-    !,
-    functor_sexpr(VNs, FunctorRep, Value, SExpr).
-functor_args_sexpr(_VNs, _FunctorRep, TF, [], SExpr) :-
-    phrase(format_("~w", [TF]), SExpr).
-functor_args_sexpr(VNs, FunctorRep, TF, [TArg|TArgs], SExpr) :-
-    maplist(functor_sexpr(VNs, FunctorRep), [TArg|TArgs], ArgSExprs),
-    phrase(format_(FunctorRep, [TF]), SExpr, SExprRest),
-    end_bracket(FunctorRep, EndBracket),
-    foldl(functor_arg_sexpr, ArgSExprs, SExprRest, EndBracket).
-
-functor_arg_sexpr(SExprArg, SExprHead, SExprTail) :-
-    phrase(format_("~s ", [SExprArg]), SExprHead, SExprTail).
-*/
