@@ -31,7 +31,7 @@
 
   (define (detect-prolog-syntax stx)
     (syntax-parse stx
-      [((~and id (~or (~datum defprolog) (~datum prolog?))) . body)
+      [((~and id (~or (~datum defprolog) (~datum prolog?) (~datum datatype))) . body)
        (quasisyntax/loc stx
          (id . #,(tag-prolog-functors #'body)))]
       [(a . d)
@@ -80,12 +80,37 @@
       [(ch in src line col pos)
        (shen-cons-fold (read-list-items in src))]))
 
-  (define read-shen-comment
+  (define read-shen-backslash-symbols
     (case-lambda
       [(ch in)
-       (read-shen-comment- in)]
+       (read-shen-backslash-symbols- in)]
       [(ch in src line col pos)
-       (read-shen-comment- in src)]))
+       (read-shen-backslash-symbols- in src)]))
+
+  ;; TODO: generalize this function to other graphic chars
+  (define (read-shen-backslash-symbols- in [src #f])
+    (case (peek-char in)
+      [(#\*)
+       (read-char in) ;; read the #\*
+
+       (define comment-chars
+         (for/list ([ch (in-input-port-chars in)]
+                    #:break (and (eq? ch #\*)
+                                 (eq? (peek-char in) #\\)))
+           ch))
+
+       (read-char in) ;; read the final #\\
+       (make-special-comment (list->string comment-chars))]
+      [(#\+)
+       (read-char in)
+       '|\+|]
+      [(#\=)
+       (read-char in)
+       (if (eq? (peek-char in) #\=)
+           (begin
+             (read-char in)
+             '|\==|)
+           '|\=|)]))
 
   (define shen-readtable
     (make-readtable #f
@@ -94,9 +119,9 @@
                     #\; 'terminating-macro (const '|;|)
                     #\, 'terminating-macro (const '|,|)
                     #\: 'terminating-macro (const '|:|)
-                    #\\ 'terminating-macro read-shen-comment
-                    #\{ #\a (current-readtable)
-                    #\} #\a (current-readtable)
+                    #\\ 'terminating-macro read-shen-backslash-symbols
+                    #\{ 'terminating-macro (const '|{|)
+                    #\} 'terminating-macro (const '|}|)
                     ;; parse # like any other symbol char
                     #\# #\a (current-readtable)))
 
@@ -105,18 +130,6 @@
     (when (and (char? ch) (char-whitespace? ch))
       (read-char in)
       (consume-spaces in)))
-
-  (define (read-shen-comment- in [src #f])
-    (when (eq? (peek-char in) #\*)
-      (read-char in) ;; read the #\*
-      (define comment-chars
-        (for/list ([ch (in-input-port-chars in)]
-                   #:break (and (eq? ch #\*)
-                                (eq? (peek-char in) #\\)))
-          ch))
-
-      (read-char in) ;; read the final #\\
-      (make-special-comment (list->string comment-chars))))
 
   (define (read-list-items in [src #f])
     (define list-contents

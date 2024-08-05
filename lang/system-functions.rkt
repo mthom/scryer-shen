@@ -5,32 +5,41 @@
                   [foldr r:foldr]
                   [map r:map]
                   [eval r:eval]
-                  [load r:load]
                   [vector r:vector])
          (only-in racket/exn
                   exn->string)
-         (only-in "packages.rkt"
-                  package-list)
          (only-in "failure.rkt"
                   fail
                   fail-if)
          "macros.rkt"
          "namespaces.rkt"
-         (only-in "reader.rkt"
-                  [read-syntax shen:read-syntax])
+         (only-in "packages.rkt"
+                  package-list)
          (for-syntax syntax/parse)
          syntax/parse/define
-         syntax/strip-context)
+         "type-syntax-expanders.rkt")
 
 (provide (all-defined-out))
+
+(define-syntax tc
+  (syntax-parser
+    [(_ (~datum +))
+     #'(begin (type-check? #t) #t)]
+    [(_ (~datum -))
+     #'(begin (type-check? #f) #f)]
+    [_ (raise-syntax-error 'tc "expects + or -")]))
+
+(define-syntax fn
+  (syntax-parser
+    [(_ id:id)
+     #:with fs-proc ((make-interned-syntax-introducer 'function) #'id)
+     #'fs-proc]))
 
 (define-syntax destroy
   (syntax-parser
     [(_ id:id)
      #`(begin
          (set! #,((make-interned-syntax-introducer 'function) #'id) (void))
-         (namespace-undefine-variable! 'id shen-namespace)
-         (namespace-undefine-variable! 'id kl-namespace)
          (hash-remove! shen-function-bindings id))]
     [(_ value) #'value]
     [id:id #''id]))
@@ -66,14 +75,14 @@
     [id:id #''id]))
 
 (define (arity proc)
-  (let ([arity (procedure-arity proc)])
+  (let ([arity (procedure-arity (function proc))])
     (if (cons? arity)
         (last arity)
         arity)))
 
 (define (bound? var)
   (if (symbol? var)
-      (with-handlers ([exn:fail:contract? (thunk #f)])
+      (with-handlers ([exn:fail:contract? (lambda (_) #f)])
         (begin
           (hash-ref shen-variable-bindings var)
           #t))
@@ -136,16 +145,6 @@
 (define (internal pkg-name)
   (package-list pkg-name 'internal))
 
-(define (load filename)
-  (define in (open-input-file filename))
-  (define expanded-forms
-    ;; (parameterize ([current-readtable shen-readtable])
-      (for/list ([stx (in-port (curry shen:read-syntax (object-name in)) in)])
-        (expand (strip-context (expand-shen-form stx)))));; )
-  (close-input-port in)
-  (eval-syntax #`(begin #,@expanded-forms))
-  'loaded)
-
 (define (output fmt-string . args)
   (apply printf fmt-string args))
 
@@ -153,7 +152,7 @@
   (build-vector size (const '...)))
 
 (define-syntax-parse-rule (freeze stx:expr)
-  (thunk stx))
+  (procedure-rename (thunk stx) '<thunk>))
 
 (define (thaw f) (f))
 
@@ -168,3 +167,27 @@
   vec)
 
 (define limit vector-length)
+
+(define (explode data)
+  (match data
+    [(? string?)
+     (map string (string->list data))]
+    [(? vector?)
+     (append '("<")
+             (apply append (vector->list (vector-map explode data)))
+             '(">"))]
+    [(? symbol?)
+     (explode (symbol->string data))]
+    [(? number?)
+     (explode (number->string data))]
+    [(list args ...)
+     (append '("[")
+             (apply append (add-between (map explode args) '(" ")))
+             '("]"))]
+    [(list-rest args ... tail)
+     (append '("[")
+             (apply append (add-between (map explode args) '(" ")))
+             '(" | ")
+             (explode tail)
+             '("]"))]))
+

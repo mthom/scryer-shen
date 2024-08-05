@@ -13,9 +13,8 @@
   (add-multiplexed-input-port-pipe! scryer-prolog-err sp-connector-out)
   (add-multiplexed-output-port-pipe! scryer-prolog-out sp-connector-out)
 
-  (let ([new-es (make-eventspace)])
-    (parameterize ([current-eventspace new-es])
-
+  (let ([prolog-debug-es (make-eventspace)])
+    (parameterize ([current-eventspace prolog-debug-es])
       (define frame (new frame%
                          [label "Scryer Prolog Debug Window"]
                          [width 800]
@@ -46,11 +45,14 @@
 
       (send frame show #t)
 
+      (define debug-output-port
+        (open-output-text-editor scryer-prolog-text #:eventspace prolog-debug-es))
+
       (thread (lambda ()
                 (let loop ()
                   (define line (read-line sp-connector-in))
                   (unless (eof-object? line)
-                    (send scryer-prolog-text insert line)
-                    (send scryer-prolog-text insert "\n"))
+                    (write-string line debug-output-port)
+                    (write-string "\n" debug-output-port))
                   (loop)))))))
 

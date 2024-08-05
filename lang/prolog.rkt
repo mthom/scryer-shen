@@ -1,13 +1,13 @@
 #lang racket
 
-(require "prolog-debug-gui.rkt"
+(require "namespaces.rkt"
+         "prolog-debug-gui.rkt"
          (only-in "prolog-syntax.rkt"
                   write-as-prolog-datum)
          (only-in racket/exn
                   exn->string)
-         (only-in "reader.rkt" shen-readtable)
-         "scryer-prolog-interface.rkt"
-         (prefix-in shen: "system-functions.rkt"))
+         "racket-iso-prolog-term-interface.rkt"
+         "scryer-prolog-interface.rkt")
 
 (provide add-prolog-predicate!
          run-prolog-query!)
@@ -21,24 +21,35 @@
   (fprintf scryer-prolog-log-out "?- ")
   (fprintf scryer-prolog-out "[user].~n~a~nend_of_file.~n" iso-prolog-code))
 
+(for ([tag (in-list '(symbol string number ?))])
+  (namespace-set-variable-value! tag identity #t shen-prolog-namespace))
+
+(define (shen-prolog-eval form)
+  (eval form shen-prolog-namespace))
+
 (define (run-prolog-query! iso-prolog-query)
   (fprintf scryer-prolog-log-out "?- ")
   (fprintf scryer-prolog-out "shen_prolog_eval((~a)).~n" iso-prolog-query)
 
-  (with-handlers ([(const #t) (lambda (e)
-                                (printf "prolog error: ~a~n" (exn->string e))
-                                (read-char scryer-prolog-in) ;; read trailing newline
-                                #f)])
+  (with-handlers ([exn:fail? (lambda (e)
+                               (printf "prolog error on query ~a: ~a~n"
+                                       iso-prolog-query (exn->string e))
+                               (read-char scryer-prolog-in) ;; read trailing newline
+                               #f)])
     (let loop ()
       (peek-for-prolog-warning)
-      (match (parameterize ([current-readtable shen-readtable])
-               (shen:eval (read scryer-prolog-in)))
-        [(list fn-call continue?)
-         (read-char scryer-prolog-in) ;; read trailing newline
-         (if continue?
+      (match (read-iso-prolog-term scryer-prolog-in)
+        [(list (list 'type-functor type))
+         type]
+        [(list 'type-check-error _)
+         #f]
+        [(or (list fn-call continue?)
+             (list 'cons fn-call (list 'cons continue? '())))
+         (define result (shen-prolog-eval fn-call))
+         (if (eq? continue? 'true)
              (begin
-               (write-as-prolog-datum (shen:eval fn-call) scryer-prolog-out)
+               (write-as-prolog-datum result scryer-prolog-out)
                (fprintf scryer-prolog-out ".~n")
                (loop))
-             fn-call)]
+             result)]
         [_ #f]))))

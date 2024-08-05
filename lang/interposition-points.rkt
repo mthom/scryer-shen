@@ -3,12 +3,20 @@
 (require (only-in "system-functions.rkt"
                   [eval shen:eval]
                   function)
+         "load.rkt"
          "macros.rkt"
+         "namespaces.rkt"
+         "printer.rkt"
+         "prolog.rkt"
          (only-in "reader.rkt" detect-prolog-syntax)
          (for-syntax syntax/parse
-                     "syntax-utils.rkt"))
+                     "syntax-utils.rkt")
+         syntax/parse
+         "syntax-utils.rkt"
+         "type-syntax-expanders.rkt")
 
-(provide app top top-interaction)
+(provide app
+         top)
 
 (define-syntax (app stx)
   (syntax-parse stx
@@ -18,7 +26,7 @@
      (syntax/loc stx (#%app . ((app function proc-var) . args)))]
     [(app . (proc:id . args))
      #:with fs-proc ((make-interned-syntax-introducer 'function) #'proc)
-     (syntax/loc stx (#%app . (fs-proc . args)))]
+     (syntax/loc stx (#%app fs-proc . args))]
     [(app . form)
      (syntax/loc stx (#%app . form))]))
 
@@ -30,11 +38,3 @@
          (syntax/loc stx (quote id)))]
     [(top . id:id)
      (syntax/loc stx (quote id))]))
-
-(define-syntax (top-interaction stx)
-  (syntax-parse stx
-    [(top-interaction . form)
-     #:with expanded-form #`(shen:eval (syntax->datum
-                                        (detect-prolog-syntax
-                                         (expand-shen-form #'#,#'form))))
-     (syntax/loc stx (#%top-interaction . expanded-form))]))

@@ -5,9 +5,10 @@
          racket/generator
          racket/match)
 
-(provide shen-printer)
+(provide shen-printer
+         type-printer)
 
-(define (print-cons-contents args port)
+(define (print-cons-contents args port printer)
   (for ([arg (in-generator
               (let loop ([pair args])
                 (cond [(cons? pair)
@@ -19,7 +20,40 @@
                          (yield pair))])))]
         [space (sequence-append (in-value "") (in-cycle '(#\space)))])
     (fprintf port "~a" space)
-    (shen-printer arg port)))
+    (printer arg port)))
+
+(define/contract (type-printer datum port)
+  (any/c output-port? . -> . any)
+  (match datum
+    [(list 'cons a d)
+     (write-char #\[ port)
+     (print-cons-contents (cons a d) port type-printer)
+     (write-char #\] port)]
+    [(list '--> a d)
+     (type-printer a port)
+     (write-string " --> " port)
+     (type-printer d port)]
+    [(list terms ...)
+     (write-char #\( port)
+     (print-cons-contents terms port type-printer)
+     (write-char #\) port)]
+    [(? empty?)
+     (write-string "[]" port)]
+    [(? shen-tuple?)
+     (write-string "(@p" port)
+     (for ([elt (in-vector (shen-tuple-args datum))])
+       (write-string " " port)
+       (type-printer elt port))
+     (write-string ")" port)]
+    [(? vector?)
+     (write-string "<" port)
+     (unless (vector-empty? datum)
+       (type-printer (vector-ref datum 0) port)
+       (for ([elt (in-vector datum 1)])
+         (write-string " " port)
+         (type-printer elt port)))
+     (write-string ">" port)]
+    [_ (shen-printer datum port)]))
 
 (define/contract (shen-printer datum port)
   (any/c output-port? . -> . any)
@@ -28,9 +62,7 @@
      (write-string "[]" port)]
     [(? cons?)
      (write-char #\[ port)
-     ;; don't print a space before the first element but do print one
-     ;; before every subsequent element
-     (print-cons-contents datum port)
+     (print-cons-contents datum port shen-printer)
      (write-char #\] port)]
     [(? symbol?)
      (write-string (symbol->string datum) port)]
@@ -48,6 +80,8 @@
        (write-string " " port)
        (shen-printer elt port))
      (write-string ")" port)]
+    [(? procedure?)
+     (write (object-name datum) port)]
     [(? vector?)
      (write-string "<" port)
      (unless (vector-empty? datum)

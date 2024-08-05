@@ -3,103 +3,71 @@
 (require "bindings.rkt"
          "macros.rkt"
          "namespaces.rkt"
-         racket/stxparam
          "packages.rkt"
          "pairs.rkt"
          "prolog.rkt"
-         "systemf.rkt"
+         racket/stxparam
          syntax/parse/define
-         (for-syntax "prolog-syntax.rkt"
+         "systemf.rkt"
+         "type-syntax-expanders.rkt"
+         (for-syntax "prolog-syntax-expanders.rkt"
                      racket/base
                      racket/function
                      racket/match
+                     racket/port
                      racket/provide-transform
                      racket/stxparam
                      racket/syntax
+                     (only-in "reader.rkt"
+                              shen-readtable)
                      syntax/parse
                      syntax/stx
-                     "syntax-utils.rkt"))
+                     "syntax-utils.rkt"
+                     "types-syntax.rkt"))
 
-(begin-for-syntax
-  (define (generate-variadic-macro-or-wrapper renamed-id assoc wrapper-id
-                                              [new-id (generate-temporary "wrapper-macro")])
-    (case assoc
-      [(#:right) (with-syntax ([wrapper-id wrapper-id]
-                               [new-id new-id]
-                               [renamed-id renamed-id])
-                   (syntax-local-lift-module-end-declaration
-                    #'(define-syntax new-id
-                        (syntax-parser
-                           [(_ a) #'(wrapper-id a)]
-                           [(_ a b) #'(wrapper-id a b)]
-                           [(_ a b . cs) #'(wrapper-id a (new-id b . cs))]
-                           [_:id #'renamed-id]))))
-                 new-id]
-      [(#:left) (with-syntax ([wrapper-id wrapper-id]
-                              [new-id new-id]
-                              [renamed-id renamed-id])
-                  (syntax-local-lift-module-end-declaration
-                   #'(define-syntax new-id
-                        (syntax-parser
-                           [(_ a) #'(wrapper-id a)]
-                           [(_ a b) #'(wrapper-id a b)]
-                           [(_ a b . cs) #'(wrapper-id a (new-id b . cs))]
-                           [_:id #'renamed-id]))))
-                new-id]
-      [else wrapper-id])))
+(define-for-syntax (variadic-op-macros name assoc)
+  (syntax-parse assoc
+    [(~datum #:right)
+     #:with right-assoc-macro-id (format-id name "shen.~a-right-assoc-macro" name)
+     (syntax-local-lift-module-end-declaration
+      #`(shen-defmacro right-assoc-macro-id
+          (cons #,name (cons Op1 (cons Op2 (cons Op3 Ops))))
+          ->
+          (cons '#,name (cons Op1 (cons (cons '#,name (cons Op2 (cons Op3 Ops))) '())))))]
+    [(~datum #:left)
+     #:with left-assoc-macro-id (format-id name "shen.~a-left-assoc-macro" name)
+     #`(shen-defmacro left-assoc-macro-id
+         (cons #,name (cons Op1 (cons Op2 (cons Op3 Ops))))
+         ->
+         (cons '#,name (cons (cons '#,name (cons Op1 (cons Op2 '()))) (cons Op3 Ops))))]))
 
 (define-syntax define-shen-function
   (syntax-parser
     [(_ fn:id racket-fn)
      #:with spaced-fn ((make-interned-syntax-introducer 'function) #'fn)
-     #:with non-spaced-fn (generate-temporary "non-spaced-wrapper")
      #'(begin
-         (define non-spaced-fn racket-fn)
-         (define spaced-fn non-spaced-fn)
-
-         (hash-set! shen-function-bindings 'fn non-spaced-fn)
-
-         (namespace-set-variable-value! 'fn non-spaced-fn #t kl-namespace)
-         (namespace-set-variable-value! 'fn non-spaced-fn #t shen-namespace))]))
+         (define spaced-fn (procedure-rename racket-fn 'fn 'shen))
+         (hash-set! shen-function-bindings 'fn spaced-fn))]))
 
 (define-syntax shen-curry-out
   (make-provide-pre-transformer
-   (lambda (stx modes)
-     (syntax-parse stx
-       [(_ f:shen-curry-out-export ...)
-        #:with (wrapper-f ...)
-               (stx-map
-                (lambda (stx)
-                  (let* ([old-wrapper-id (generate-temporary "wrapper")]
-                         [new-wrapper-id ((make-interned-syntax-introducer 'function) old-wrapper-id)])
-                    (with-syntax ([wrapper-id old-wrapper-id]
-                                  [stx stx])
-                      (syntax-local-lift-module-end-declaration
-                       #'(define-shen-function wrapper-id stx)))
-                    new-wrapper-id))
-                #'(f.wrapper ...))
-        #:with (exports ...)
-               (stx-map
-                (lambda (stx)
-                  (match (syntax-e stx)
-                    [(list assoc renamed-id curry-wrapper wrapper-id)
-                     (with-syntax ([macro-or-wrapper-id (generate-variadic-macro-or-wrapper
-                                                         (syntax->datum renamed-id)
-                                                         (syntax->datum assoc)
-                                                         wrapper-id)]
-                                   [curry-wrapper curry-wrapper]
-                                   [renamed-id renamed-id])
-                       (syntax-local-lift-expression
-                        #'(systemf 'renamed-id))
-                       (syntax-local-lift-expression
-                        #'(hash-set! shen-function-bindings 'renamed-id curry-wrapper))
-                       (if (syntax->datum assoc)
-                           #'(rename-out [macro-or-wrapper-id renamed-id])
-                           #'(for-space function (rename-out [macro-or-wrapper-id renamed-id]))))]))
-                #'((f.assoc f.renamed-id f.wrapper wrapper-f) ...))
-        (pre-expand-export
-         #'(combine-out exports ...)
-         modes)]))))
+   (lambda (export-list modes)
+     (syntax-parse export-list
+       [(_ . export-list)
+        #:with (export ...)
+        (stx-map (syntax-parser
+                   [f:shen-curry-out-export
+                    (when (syntax->datum #'f.assoc)
+                      (variadic-op-macros #'f.renamed-id #'f.assoc))
+                    (syntax-local-lift-expression
+                     #'(systemf 'f.renamed-id))
+                    (syntax-local-lift-module-end-declaration
+                     #'(define-shen-function f.renamed-id f.wrapper))
+                    #'(for-space function f.renamed-id)])
+                 (syntax->list #'export-list))
+       (pre-expand-export
+        #'(combine-out export ...)
+        modes)]))))
 
 (define-syntax shen-function-out
   (make-provide-pre-transformer
@@ -119,13 +87,27 @@
 (define-syntax shen-define
   (syntax-parser
     [(shen-define define-form:shen-define)
-     #'(define-shen-function define-form.name define-form.wrapper)]
-    [shen-define:id #''shen-define]))
+     #:when (attribute define-form.type-sig)
+     #:cut
+     (let-values ([(queries assert-strings retract-strings)
+                   (function-def->type-check-queries
+                    #'define-form.name
+                    #'define-form.type-sig
+                    #'(define-form.clause ...))])
+       #`(begin
+           (define-shen-function define-form.name define-form.wrapper)
+           (enqueue-function-type-data! '#,queries '#,assert-strings '#,retract-strings)
+           define-form.name))]
+    [(shen-define define-form:shen-define)
+     #'(begin
+         (define-shen-function define-form.name define-form.wrapper)
+         define-form.name)]
+    [shen-define:id #''define]))
 
 (define-syntax shen-defmacro
   (syntax-parser
     [(shen-defmacro defmacro:shen-defmacro)
-     #'(add-shen-macro-expander! defmacro.name defmacro.expander)]
+     #'(add-shen-macro-expander! 'defmacro.name defmacro.expander)]
     [defmacro:id #''defmacro]))
 
 (define-syntax shen-package
@@ -218,17 +200,18 @@
 (define-syntax shen-lambda
   (syntax-parser
     [(shen-lambda lambda-form:shen-lambda-form)
-     #'(lambda (lambda-form.var ...)
-         lambda-form.body-expr
-         ...)]))
+     #'(procedure-rename (curry
+                          (lambda (lambda-form.var ...)
+                            lambda-form.body-expr))
+                         'anonymous-fn
+                         'shen)]))
 
 (define-syntax shen-let
   (syntax-parser
     [(shen-let let-form:shen-let-form)
      #'(let* ([let-form.binding-id let-form.binding-expr]
               ...)
-         let-form.body-expr
-         ...)]))
+         let-form.body-expr)]))
 
 (define-syntax shen-cond
   (syntax-parser
@@ -236,6 +219,14 @@
      #'(cond [cond-form.condition cond-form.true-form]
              ...
              [else #f])]))
+
+(define-syntax shen-datatype
+  (syntax-parser
+    [(shen-datatype type-module-name:id sequent:shen-type-sequent ...+)
+     #:with iso-prolog-type-definitions (datatype->type-definition
+                                         #'type-module-name
+                                         #'(sequent ...))
+     #'(enqueue-datatype-definition! (quote iso-prolog-type-definitions))]))
 
 (define-syntax shen-if
   (syntax-parser
@@ -263,6 +254,7 @@
                       shen-function-out)
          (rename-out [shen-true true]
                      [shen-false false]
+                     [shen-datatype datatype]
                      [shen-define define]
                      [shen-cond cond]
                      [shen-if if]

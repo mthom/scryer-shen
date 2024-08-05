@@ -11,27 +11,29 @@
          scryer-prolog-out)
 
 (define-runtime-path scryer-prolog-path   "../dist/bin/scryer-prolog")
-(define-runtime-path scryer-prolog-server "../scryer-prolog-server.pl")
-(define-runtime-path scryer-shen-toplevel "../scryer-shen-toplevel.pl")
+(define-runtime-path scryer-shen-toplevel "../scryer-server/scryer-shen-toplevel.pl")
 
 (define-values (scryer-prolog-process in out err)
-  (subprocess #f #f #f scryer-prolog-path "-f" scryer-prolog-server scryer-shen-toplevel))
+  (subprocess #f #f #f 'new scryer-prolog-path "-f" scryer-shen-toplevel))
 
 (struct multiplexed-input-port [name wrapped-in child-outs]
   #:property prop:input-port (struct-field-index wrapped-in))
 
 (define (make-multiplexed-input-port name in)
   (define child-outs (make-gvector))
-  (define wrapped-in (make-input-port/read-to-peek
+  (define wrapped-in (make-input-port
                       name
                       (lambda (bstr)
                         (unless (eq? (subprocess-status scryer-prolog-process) 'running)
                           (error "Scryer Prolog is no longer running!"))
-                        (define result (read-bytes! bstr in))
-                        (for ([pipe (in-gvector child-outs)])
-                          (write-bytes bstr pipe))
-                        result)
-                      #f
+                        (handle-evt (read-bytes!-evt bstr in)
+                                    (lambda (bytes-read-or-eof)
+                                      (unless (eof-object? bytes-read-or-eof)
+                                        (for ([pipe (in-gvector child-outs)])
+                                          (write-bytes bstr pipe)))
+                                      bytes-read-or-eof)))
+                      (lambda (bstr skip progress-evt)
+                        (peek-bytes!-evt bstr skip progress-evt in))
                       (thunk (close-input-port in))))
   (multiplexed-input-port name wrapped-in child-outs))
 

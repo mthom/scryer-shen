@@ -49,32 +49,31 @@
             internal-symbols)))
 
 (define (fqn pkg-name export-list external-symbols internal-symbols top-level-decl)
-  (letrec ([fqn (lambda (top-level-decl)
-                  (syntax-parse top-level-decl
-                    [decl:shen-var-id
-                     #'decl]
-                    [decl:id
-                     (cond [(member (syntax->datum #'decl) (reserved-shen-symbols))
-                            #'decl]
-                           [(member (syntax->datum #'decl) export-list)
-                            (hash-set! external-symbols #'decl (void))
-                            #'decl]
-                           [(let ([pkg-name-str (symbol->string (syntax->datum pkg-name))]
-                                  [decl-str (symbol->string (syntax->datum #'decl))])
-                              (or (string-prefix? decl-str "shen.")
-                                  (string-prefix? decl-str (string-append pkg-name-str "."))))
-                            (hash-set! internal-symbols #'decl (void))
-                            #'decl]
-                           [else
-                            (let ([dotted-id (format-id top-level-decl "~a.~a" pkg-name #'decl)])
-                              (hash-set! internal-symbols dotted-id (void))
-                              dotted-id)])]
-                    [decl:expr
-                     #:when (stx-pair? #'decl)
-                     (quasisyntax/loc top-level-decl
-                       (#,(fqn (stx-car #'decl))
-                        .
-                        #,(stx-map fqn (stx-cdr #'decl))))]
-                    [decl:expr
-                     #'decl]))])
-    (fqn top-level-decl)))
+  (let fqn ([top-level-decl top-level-decl])
+    (syntax-parse top-level-decl
+      [decl:shen-var-id
+       #'decl]
+      [decl:id
+       (cond [(member (syntax->datum #'decl) (reserved-shen-symbols))
+              #'decl]
+             [(member (syntax->datum #'decl) export-list)
+              (hash-set! external-symbols #'decl (void))
+              #'decl]
+             [(let ([pkg-name-str (symbol->string (syntax->datum pkg-name))]
+                    [decl-str (symbol->string (syntax->datum #'decl))])
+                (or (string-prefix? decl-str "shen.")
+                    (string-prefix? decl-str (string-append pkg-name-str "."))))
+              (hash-set! internal-symbols #'decl (void))
+              #'decl]
+             [else
+              (let ([dotted-id (format-id top-level-decl "~a.~a" pkg-name #'decl)])
+                (hash-set! internal-symbols dotted-id (void))
+                dotted-id)])]
+      [decl:expr
+       #:when (stx-pair? #'decl)
+       (quasisyntax/loc top-level-decl
+         (#,(fqn (stx-car #'decl))
+          .
+          #,(stx-map fqn (stx-cdr #'decl))))]
+      [decl:expr
+       #'decl])))

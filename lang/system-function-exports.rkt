@@ -11,6 +11,8 @@
                   shen-curry-out
                   shen-function-out)
          "failure.rkt"
+         (only-in "load.rkt"
+                  load)
          "system-functions.rkt"
          "systemf.rkt")
 
@@ -23,10 +25,8 @@
                          [< #:arity 2]
                          [equal? = #:arity 2]
                          [equal? == #:arity 2]
-                         [foldr #:arity 3]
                          [>= #:arity 2]
                          [<= #:arity 2]
-                         [make-vector absvector #:arity 1]
                          [<-vector #:arity 2]
                          [vector-> #:arity 3]
                          [cons adjoin #:arity 2]
@@ -39,9 +39,9 @@
          (rename-out [begin do]
                      [shen-and and]
                      [shen-or or])
-         (shen-function-out [car hd]
+         (shen-function-out [car head]
                             cd
-                            [cdr tl]
+                            [cdr tail]
                             [vector? absvector?]
                             arity
                             bound?
@@ -52,6 +52,7 @@
                             external
                             eval
                             eval-kl
+                            explode
                             function
                             internal
                             limit
@@ -66,5 +67,7 @@
          (all-from-out "failure.rkt")
          destroy
          error
+         fn
          freeze
-         set)
+         set
+         tc)

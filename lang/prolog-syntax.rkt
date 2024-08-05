@@ -1,30 +1,23 @@
 #lang racket
 
 (require data/gvector
-         (for-template racket)
+         "pairs.rkt"
          syntax/parse
          syntax/stx
          "syntax-utils.rkt")
 
-(provide expand-shen-defprolog
-         expand-shen-prolog-query
+(provide prolog-syntax-writers
+         shen-atom->prolog-atom
          write-as-prolog-datum)
 
 (define (shen-atom->prolog-atom atom)
   (let* ([underlying-str (symbol->string atom)])
-    (define unhyphenated-atom
-      (if (equal? underlying-str "-")
-          "-"
-          (string-replace underlying-str "-" "_")))
-    (if (memf (lambda (ch) (or (eq? ch #\?) (eq? ch #\@)))
-              (string->list unhyphenated-atom))
-        (string-append "'" unhyphenated-atom "'")
-        unhyphenated-atom)))
+    (if (or (equal? underlying-str "_")
+            (char-upper-case? (string-ref underlying-str 0)))
+        underlying-str
+        (string-append "'" underlying-str "'"))))
 
 ;; write-as-prolog-datum is not redundant: runtime data need
-;; special handling since they don't have the syntactic structure
-;; exploited by prolog-syntax-writers at compile time.
-
 (define (write-as-prolog-datum datum port)
   (let loop ([datum datum])
     (match datum
@@ -39,7 +32,7 @@
       [(? symbol?)
        (write-string (shen-atom->prolog-atom datum) port)]
       [(? string?)
-       (fprintf port "\"~s\"" datum)]
+       (fprintf port "~s" datum)]
       [(== #t eq?)
        (fprintf port "true")]
       [(== #f eq?)
@@ -47,13 +40,13 @@
       [_
        (write datum port)])))
 
-(define (prolog-syntax-writers query?)
+(define (prolog-syntax-writers query? [embedded? #t])
   (define string-port (open-output-string))
   (letrec ([received-vars-vec (make-gvector)]
            [shift-args (lambda (stx [top-level-arg? #t])
                          (syntax-parse stx
                            [((~datum receive) id:shen-var-id)
-                            #:when query?
+                            #:when (and query? embedded?)
                             (gvector-add! received-vars-vec #'id)
                             (datum->syntax stx '~a stx)]
                            [(~or ((~datum cons) hd tl)
@@ -94,6 +87,16 @@
                                     (write-string "use_module('" string-port)
                                     (write (syntax->datum #'file-name) string-port)
                                     (write-string "')" string-port)]
+                                   [((~and slash-op (~or (~literal |\+|) (~literal |\=|) (~literal |\==|)))
+                                     term)
+                                    #:when top-level?
+                                    ;; support ISO Prolog functors for
+                                    ;; negation as failure, not
+                                    ;; unifiable, not equal
+                                    (write-string (symbol->string (syntax-e #'slash-op)) string-port)
+                                    (write-string "(" string-port)
+                                    (write-prolog-datum (shift-args #'term))
+                                    (write-string ")" string-port)]
                                    [((~datum is!) x t)
                                     #:when top-level?
                                     (let ([x (shift-args #'x)]
@@ -133,6 +136,12 @@
                                       (write-string "cont:shift(return_to_shen(" string-port)
                                       (write-prolog-datum t)
                                       (write-string "))" string-port))]
+                                   [((~datum type-check-return) t)
+                                    #:when top-level?
+                                    (let ([t (shift-args #'t)])
+                                      (write-string "cont:shift(type_check_return_to_shen(" string-port)
+                                      (write-prolog-datum t)
+                                      (write-string "))" string-port))]
                                    [((~datum var?) t)
                                     #:when top-level?
                                     (let ([t (shift-args #'t)])
@@ -155,12 +164,13 @@
                                     (let ([t (shift-args #'t)])
                                       (write-prolog-datum t)
                                       (write-string " = true" string-port))]
-                                   [((~literal #%prolog-functor) id:id . args)
+                                   [((~datum #%prolog-functor) id:id . args)
                                     (let ([args (stx-map shift-args #'args)])
                                       (write-string (shen-atom->prolog-atom (syntax->datum #'id)) string-port)
-                                      (write-string "(" string-port)
-                                      (write-prolog-goals args #f)
-                                      (write-string ")" string-port))]
+                                      (unless (stx-null? #'args)
+                                        (write-string "(" string-port)
+                                        (write-prolog-goals args #f)
+                                        (write-string ")" string-port)))]
                                    [(hd . tl)
                                     (let ([tl (if top-level? (stx-map shift-args #'tl) #'tl)])
                                       (write-prolog-datum #'hd)
@@ -190,42 +200,3 @@
     (values string-port
             write-prolog-goals
             received-vars-vec)))
-
-(define (expand-shen-defprolog name rules)
-  (define-values (string-port write-prolog-goals received-vars-vec)
-    (prolog-syntax-writers #f))
-
-  (let ([name (shen-atom->prolog-atom (syntax->datum name))])
-    (for-each (lambda (rule-stx)
-                (write-string name string-port)
-                (syntax-parse rule-stx
-                  [(rule:shen-prolog-rule)
-                   (unless (stx-null? #'(rule.head-form ...))
-                     (write-string "(" string-port)
-                     (write-prolog-goals #'(rule.head-form ...) #f)
-                     (write-string ")" string-port))
-
-                   (unless (stx-null? #'(rule.body-form ...))
-                     (write-string " :- " string-port)
-                     (write-prolog-goals #'(rule.body-form ...) #t))
-
-                   (write-string ".\n" string-port)]))
-              (syntax->list rules)))
-
-  (get-output-string string-port))
-
-(define (expand-shen-prolog-query query)
-  (define-values (string-port write-prolog-goals received-vars-vec)
-    (prolog-syntax-writers #t))
-
-  (write-prolog-goals query #t)
-
-  (quasisyntax/loc query
-    (apply format
-           #,(get-output-string string-port)
-           (map
-            (lambda (shen-value)
-              (let ([port (open-output-string)])
-                (write-as-prolog-datum shen-value port)
-                (get-output-string port)))
-            (list #,@(gvector->list received-vars-vec))))))

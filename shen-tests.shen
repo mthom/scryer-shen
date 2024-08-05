@@ -53,3 +53,4 @@
 
 (define foo-2
   X -> (prolog? (f (receive X) (h (g (receive X) X) (g Y)))))
+
