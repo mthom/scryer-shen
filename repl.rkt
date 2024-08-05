@@ -31,8 +31,7 @@
 
   (parameterize ([current-readtable shen-readtable])
     (let loop ()
-      (with-handlers ([shen-type-check-exn? (lambda (e)
-                                              (printf "type error\n"))]
+      (with-handlers ([shen-type-check-exn? (lambda (_) (printf "type error"))]
                       [exn:break? (lambda (e)
                                     (write-char #\newline)
                                     (exit))]

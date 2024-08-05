@@ -73,7 +73,7 @@ matching_variable_labels_loop(TermVars, NumVars0, Min, VNs0, VNs) :-
 variable_labels(Term, VNs0, VNs) :-
     term_variables(Term, TermVars),
     length(TermVars, NumVars0),
-    matching_variable_labels_loop(TermVars, NumVars0, 1, VNs0, VNs).
+    matching_variable_labels_loop(TermVars, NumVars0, 0, VNs0, VNs).
 
 pause_or_return(none, Ball, VNs) :-
     function_eval(Ball, VNs).

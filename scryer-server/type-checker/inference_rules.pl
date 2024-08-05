@@ -53,6 +53,10 @@ type_check(apply(F), R) -->
     [g(type_check(F, -->(R)))].
 type_check(fn(F), A) -->
     [g(declare(F, A))].
+type_check(freeze(E), lazy(A)) -->
+    [g(type_check(E, A))].
+type_check(thaw(E), A) -->
+    [g(type_check(E, lazy(A)))].
 
 
 :- discontiguous(provable/3).
@@ -80,6 +84,37 @@ declare(+, (number --> (number --> number))).
 declare(-, (number --> (number --> number))).
 declare(*, (number --> (number --> number))).
 declare(/, (number --> (number --> number))).
-declare(hd, (list(A) --> A)).
-declare(tl, (list(A) --> list(A))).
+declare(=, (A --> (A --> boolean))).
+declare(==, (A --> (A --> boolean))).
+declare(>, (number --> (number --> boolean))).
+declare(<, (number --> (number --> boolean))).
+declare(>=, (number --> (number --> boolean))).
+declare(<=, (number --> (number --> boolean))).
+declare(head, (list(A) --> A)).
+declare(tail, (list(A) --> list(A))).
+declare(explode, (_A --> list(string))).
+declare(cd, (string --> string)).
+declare(arity, (_A --> number)).
+declare('absvector?', (_A --> boolean)).
+declare('bound?', (symbol --> boolean)).
+declare(cons, (A --> (list(A) --> list(A)))).
+declare(adjoin, (A --> (list(A) --> list(A)))).
+declare(append, (list(A) --> (list(A) --> list(A)))).
+declare(difference, (list(A) --> (list(A) --> list(A)))).
+declare('element?', (A --> (list(A) --> boolean))).
 declare(map, ((A --> B) --> (list(A) --> list(B)))).
+declare(cn, (string --> (string --> string))).
+declare('cons?', (_A --> boolean)).
+declare('empty?', (_A --> boolean)).
+declare(error_to_string, (exception --> string)).
+declare(external, (symbol --> list(symbol))).
+declare(internal, (symbol --> list(symbol))).
+declare(limit, (vector(_A) --> number)).
+declare('symbol?', (_A --> boolean)).
+declare(systemf, (symbol --> symbol)).
+declare(freeze, (A --> lazy(A))).
+declare(thaw, (lazy(A) --> A)).
+declare(undefmacro, (symbol --> symbol)).
+declare(vector, (number --> vector(_A))).
+declare('<-vector', (vector(A) --> (number --> A))).
+declare('vector->', (vector(A) --> (number --> (A --> vector(A))))).

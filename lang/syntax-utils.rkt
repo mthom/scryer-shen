@@ -131,6 +131,14 @@
                                                      type-datum?
                                                      untagged-vars?)
      #`(#%prolog-functor id first-arg-stx second-arg-stx)]
+    [((~and id:id (~or (~datum freeze)
+                       (~datum thaw)))
+      e:expr)
+     #`(#%prolog-functor id
+                         #,(syntax->shen-prolog-term
+                            #'e
+                            type-datum?
+                            untagged-vars?))]
     [((~datum let) first-b:shen-binding remaining-b ... body-expr:expr)
      #:with id-shen-prolog-term (if (and type-datum? (not untagged-vars?))
                                     #'(#%prolog-functor ? first-b.id)

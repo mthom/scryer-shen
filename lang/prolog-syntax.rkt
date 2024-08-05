@@ -12,19 +12,10 @@
 
 (define (shen-atom->prolog-atom atom)
   (let* ([underlying-str (symbol->string atom)])
-    (define unhyphenated-atom
-      (case underlying-str
-        [("-" "->" "-->")
-         underlying-str]
-        [else
-         (string-replace underlying-str "-" "_")]))
-    (if (memf (lambda (ch)
-                (case ch
-                  [(#\, #\; #\? #\@) #t]
-                  [else #f]))
-              (string->list unhyphenated-atom))
-        (string-append "'" unhyphenated-atom "'")
-        unhyphenated-atom)))
+    (if (or (equal? underlying-str "_")
+            (char-upper-case? (string-ref underlying-str 0)))
+        underlying-str
+        (string-append "'" underlying-str "'"))))
 
 ;; write-as-prolog-datum is not redundant: runtime data need
 (define (write-as-prolog-datum datum port)

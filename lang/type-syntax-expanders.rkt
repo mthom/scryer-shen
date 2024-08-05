@@ -67,11 +67,11 @@
     (define (pattern-hyps pat-types pats clause-guard)
       (with-syntax ([(pat ...) pats]
                     [(pat-type ...) pat-types])
-        (shen-cons-syntax #`((#%prolog-functor type-check pat pat-type)
+        (shen-cons-syntax #`((#%prolog-functor type_check pat pat-type)
                              ...
                              #,@(if (eq? (syntax->datum clause-guard) #t)
                                     #'()
-                                    #`((#%prolog-functor type-check
+                                    #`((#%prolog-functor type_check
                                                          (#%prolog-functor apply #,@clause-guard)
                                                          verified)))))))
 
@@ -91,8 +91,8 @@
          (values
           (let-values ([(string-port write-prolog-goals received-vars-vec) (prolog-syntax-writers #t #f)])
             ;; assert the function declares
-            (write-prolog-goals #`((retractall (#%prolog-functor : inference-rules #,declare-functor))
-                                   (assertz (#%prolog-functor : inference-rules #,declare-functor)))
+            (write-prolog-goals #`((retractall (#%prolog-functor : inference_rules #,declare-functor))
+                                   (assertz (#%prolog-functor : inference_rules #,declare-functor)))
                                 #t)
             (get-output-string string-port))
 
@@ -101,7 +101,7 @@
             (define-values (string-port write-prolog-goals received-vars-vec)
               (prolog-syntax-writers #t #f))
 
-            (write-prolog-goals #`((retractall (#%prolog-functor : inference-rules #,declare-functor))) #t)
+            (write-prolog-goals #`((retractall (#%prolog-functor : inference_rules #,declare-functor))) #t)
             (get-output-string string-port)))]))
 
     (define shen-prolog-queries
@@ -120,9 +120,9 @@
                                             (curry pattern-hyps #'(pat-type ...))
                                             #'((pat-form ...) ...)
                                             #'(clause-guard ...))])
-           #'(((: type-checker (#%prolog-functor start-proof
+           #'(((: type_checker (#%prolog-functor start_proof
                                  pattern-hyp
-                                 (#%prolog-functor type-check clause-body clause-type)
+                                 (#%prolog-functor type_check clause-body clause-type)
                                  _)))
               ...))]))
 

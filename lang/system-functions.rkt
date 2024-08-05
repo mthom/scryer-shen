@@ -75,14 +75,14 @@
     [id:id #''id]))
 
 (define (arity proc)
-  (let ([arity (procedure-arity proc)])
+  (let ([arity (procedure-arity (function proc))])
     (if (cons? arity)
         (last arity)
         arity)))
 
 (define (bound? var)
   (if (symbol? var)
-      (with-handlers ([exn:fail:contract? (thunk #f)])
+      (with-handlers ([exn:fail:contract? (lambda (_) #f)])
         (begin
           (hash-ref shen-variable-bindings var)
           #t))
@@ -152,7 +152,7 @@
   (build-vector size (const '...)))
 
 (define-syntax-parse-rule (freeze stx:expr)
-  (thunk stx))
+  (procedure-rename (thunk stx) '<thunk>))
 
 (define (thaw f) (f))
 
@@ -167,3 +167,27 @@
   vec)
 
 (define limit vector-length)
+
+(define (explode data)
+  (match data
+    [(? string?)
+     (map string (string->list data))]
+    [(? vector?)
+     (append '("<")
+             (apply append (vector->list (vector-map explode data)))
+             '(">"))]
+    [(? symbol?)
+     (explode (symbol->string data))]
+    [(? number?)
+     (explode (number->string data))]
+    [(list args ...)
+     (append '("[")
+             (apply append (add-between (map explode args) '(" ")))
+             '("]"))]
+    [(list-rest args ... tail)
+     (append '("[")
+             (apply append (add-between (map explode args) '(" ")))
+             '(" | ")
+             (explode tail)
+             '("]"))]))
+

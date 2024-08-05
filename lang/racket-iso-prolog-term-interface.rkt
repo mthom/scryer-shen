@@ -29,6 +29,9 @@
          (repetition 1 +inf.0 graphic-char)
          single-quoted))
 
+(define-lex-abbrev number
+  (repetition 1 +inf.0 numeric))
+
 (define-lex-abbrev variable
   (concatenation (union upper-case "_")
                  (repetition 0 +inf.0 (union alphabetic numeric))))
@@ -43,7 +46,7 @@
        ["|" (token 'BAR lexeme)]
        [atom (token 'ATOM (string->symbol lexeme))]
        [variable (token 'VARIABLE (string->symbol lexeme))]
-       [numeric (token 'NUMBER (string->number lexeme))]
+       [number (token 'NUMBER (string->number lexeme))]
        [quoted-string (token 'STRING lexeme)]
        [whitespace (token 'WHITESPACE lexeme #:skip? #t)]
        [(char-set "()[],| ") lexeme]
@@ -67,7 +70,7 @@
 
 (define (iso-prolog-term->shen-expr term-tree)
   (define output-port (open-output-string))
-  
+
   (define (subterms term)
     (for/list ([term (in-generator
                       (let loop ([term term])
@@ -137,6 +140,7 @@
   (parameterize ([current-readtable shen-readtable])
     (read (open-input-string (get-output-string output-port)))))
 
+;; (parse-to-datum (apply-tokenizer-maker make-tokenizer "type_check_error(inference_limit_exceeded)"))
 ;; (parse-to-datum (apply-tokenizer-maker make-tokenizer "'.'(number,'.'(false,[]))"))
 ;; (parse-to-datum (apply-tokenizer-maker make-tokenizer "term"))
 ;; (parse-to-datum (apply-tokenizer-maker make-tokenizer "term(b,c,[])"))

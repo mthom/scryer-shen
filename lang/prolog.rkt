@@ -1,13 +1,13 @@
 #lang racket
 
-(require "prolog-debug-gui.rkt"
+(require "namespaces.rkt"
+         "prolog-debug-gui.rkt"
          (only-in "prolog-syntax.rkt"
                   write-as-prolog-datum)
          (only-in racket/exn
                   exn->string)
          "racket-iso-prolog-term-interface.rkt"
-         "scryer-prolog-interface.rkt"
-         (prefix-in shen: "system-functions.rkt"))
+         "scryer-prolog-interface.rkt")
 
 (provide add-prolog-predicate!
          run-prolog-query!)
@@ -20,6 +20,12 @@
 (define (add-prolog-predicate! iso-prolog-code)
   (fprintf scryer-prolog-log-out "?- ")
   (fprintf scryer-prolog-out "[user].~n~a~nend_of_file.~n" iso-prolog-code))
+
+(for ([tag (in-list '(symbol string number ?))])
+  (namespace-set-variable-value! tag identity #t shen-prolog-namespace))
+
+(define (shen-prolog-eval form)
+  (eval form shen-prolog-namespace))
 
 (define (run-prolog-query! iso-prolog-query)
   (fprintf scryer-prolog-log-out "?- ")
@@ -35,13 +41,15 @@
       (match (read-iso-prolog-term scryer-prolog-in)
         [(list (list 'type-functor type))
          type]
-        [term
-         (match (shen:eval term)
-           [(list fn-call continue?)
-            (if continue?
-                (begin
-                  (write-as-prolog-datum (shen:eval fn-call) scryer-prolog-out)
-                  (fprintf scryer-prolog-out ".~n")
-                  (loop))
-                fn-call)]
-           [_ #f])]))))
+        [(list 'type-check-error _)
+         #f]
+        [(or (list fn-call continue?)
+             (list 'cons fn-call (list 'cons continue? '())))
+         (define result (shen-prolog-eval fn-call))
+         (if (eq? continue? 'true)
+             (begin
+               (write-as-prolog-datum result scryer-prolog-out)
+               (fprintf scryer-prolog-out ".~n")
+               (loop))
+             result)]
+        [_ #f]))))

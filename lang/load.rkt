@@ -52,9 +52,9 @@
 
 (define (expression-type-check pre-eval-syntax)
   (define type-query
-    #`((#%prolog-functor : type-checker
-                         (#%prolog-functor start-proof []
-                                           (#%prolog-functor type-check
+    #`((#%prolog-functor : type_checker
+                         (#%prolog-functor start_proof []
+                                           (#%prolog-functor type_check
                                                              #,pre-eval-syntax
                                                              ResultType)
                                            _))
@@ -82,10 +82,11 @@
      (shen:eval (syntax->datum pre-eval-stx))
      (post-load-type-check!)
      (fprintf (current-output-port) "~a#type" (syntax->datum #'name))]
+    [((~literal prolog?) . _)
+     (shen-printer (shen:eval (syntax->datum pre-eval-stx)) (current-output-port))]
     [(~or ((~literal defmacro) name . _)
           ((~literal defprolog) name . _)
-          ((~literal package) name . _)
-          ((~literal prolog?) name . _))
+          ((~literal package) name . _))
      (let ([result (shen:eval (syntax->datum pre-eval-stx))])
        (post-load-type-check!)
        (shen-printer (syntax->datum #'name) (current-output-port)))]
