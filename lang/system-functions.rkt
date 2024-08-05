@@ -15,6 +15,7 @@
                   fail-if)
          "macros.rkt"
          "namespaces.rkt"
+         "pairs.rkt"
          (only-in "packages.rkt"
                   package-list)
          (for-syntax syntax/parse)
@@ -188,5 +189,16 @@
       (string? value)
       (symbol? value)))
 
+(define (fix f)
+  (procedure-rename (lambda (x) ((fix f) x)) '<thunk>))
 
+(define (fst tuple)
+  (vector-ref (shen-tuple-args tuple) 0))
 
+(define (snd tuple)
+  (vector-ref (shen-tuple-args tuple) 1))
+
+(define (hdstr str)
+  (string (string-ref str 0)))
+
+(define intern string->symbol)

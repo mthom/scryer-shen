@@ -30,9 +30,11 @@
      (print-cons-contents (cons a d) port type-printer)
      (write-char #\] port)]
     [(list '--> a d)
+     (write-string "(" port)
      (type-printer a port)
      (write-string " --> " port)
-     (type-printer d port)]
+     (type-printer d port)
+     (write-string ")" port)]
     [(list terms ...)
      (write-char #\( port)
      (print-cons-contents terms port type-printer)

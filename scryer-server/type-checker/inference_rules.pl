@@ -106,12 +106,13 @@ declare(map, ((A --> B) --> (list(A) --> list(B)))).
 declare(cn, (string --> (string --> string))).
 declare('cons?', (_A --> boolean)).
 declare('empty?', (_A --> boolean)).
-declare(error_to_string, (exception --> string)).
+declare('error-to-string', (exception --> string)).
 declare(external, (symbol --> list(symbol))).
 declare(internal, (symbol --> list(symbol))).
 declare(limit, (vector(_A) --> number)).
 declare('symbol?', (_A --> boolean)).
 declare('atom?', (_A --> boolean)).
+declare('integer?', (_A --> boolean)).
 declare(systemf, (symbol --> symbol)).
 declare(freeze, (A --> lazy(A))).
 declare(thaw, (lazy(A) --> A)).
@@ -121,3 +122,10 @@ declare('<-vector', (vector(A) --> (number --> A))).
 declare('vector->', (vector(A) --> (number --> (A --> vector(A))))).
 declare(and, (boolean --> (boolean --> boolean))).
 declare(or, (boolean --> (boolean --> boolean))).
+declare(fail, -->(symbol)).
+declare(fix, ((A --> A) --> (A --> A))).
+declare(fst, ((A * _B) --> A)).
+declare(snd, ((_A * B) --> B)).
+declare(gensym, (symbol --> symbol)).
+declare(hdstr, (string --> string)).
+declare(intern, (string --> symbol)).

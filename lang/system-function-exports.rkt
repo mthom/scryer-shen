@@ -52,11 +52,18 @@
                             eval
                             eval-kl
                             explode
+                            fix
+                            fst
                             function
+                            gensym
+                            hdstr
+                            integer?
+                            intern
                             internal
                             limit
                             load
                             output
+                            snd
                             symbol?
                             systemf
                             thaw

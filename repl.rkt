@@ -42,7 +42,7 @@
         (load-shen-form (detect-prolog-syntax
                          (expand-shen-form
                           (read-syntax)))))
-      (printf "~n")
+      (printf "~n~n")
       (loop))))
 
 (shen-repl)
