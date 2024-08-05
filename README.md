@@ -26,7 +26,7 @@ those found in programming languages like Agda and Lean.
 - [x] Add `if` and `cond` forms
 - [x] Add `@v`, `@p` and `@s` constructors/patterns
 - [x] Add `freeze` and `thaw`
-- [ ] Add `deftype` and support for type signatures in functions
+- [x] Add `deftype` and support for type signatures in functions
 - [ ] Use `raco` and Racket's `compiler` API to automatically download, 
       compile and package Scryer Prolog with Scryer Shen
 - [ ] Implement the rest of the Shen standard library
