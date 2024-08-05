@@ -36,10 +36,9 @@
                          [concat #:arity 2]
                          [difference #:arity 2]
                          [element? #:arity 2])
-         (rename-out [begin do]
-                     [shen-and and]
-                     [shen-or or])
-         (shen-function-out [car head]
+         (rename-out [begin do])
+         (shen-function-out atom?
+                            [car head]
                             cd
                             [cdr tail]
                             [vector? absvector?]

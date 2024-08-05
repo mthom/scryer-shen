@@ -139,6 +139,23 @@
                             #'e
                             type-datum?
                             untagged-vars?))]
+    [((~datum if) cond:expr then:expr else:expr)
+     #:with cond-term (syntax->shen-prolog-term
+                       #'cond
+                       type-datum?
+                       untagged-vars?)
+     #:with then-term (syntax->shen-prolog-term
+                       #'then
+                       type-datum?
+                       untagged-vars?)
+     #:with else-term (syntax->shen-prolog-term
+                       #'else
+                       type-datum?
+                       untagged-vars?)
+     #'(#%prolog-functor if
+                         cond-term
+                         then-term
+                         else-term)]
     [((~datum let) first-b:shen-binding remaining-b ... body-expr:expr)
      #:with id-shen-prolog-term (if (and type-datum? (not untagged-vars?))
                                     #'(#%prolog-functor ? first-b.id)

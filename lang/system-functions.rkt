@@ -1,6 +1,8 @@
 #lang racket
 
 (require "bindings.rkt"
+         (only-in "expander.rkt"
+                  defmacro)
          (only-in racket
                   [foldr r:foldr]
                   [map r:map]
@@ -44,29 +46,21 @@
     [(_ value) #'value]
     [id:id #''id]))
 
-(define and-wrapper
-  (curry
-   (lambda (value thunk)
-     (if value (thunk) #f))))
+(defmacro shen.and-right-assoc-macro
+  (cons and (cons Op1 (cons Op2 (cons Op3 Ops))))
+  ->
+  (cons 'if (cons Op1 (cons (cons 'and (cons Op2 (cons Op3 Ops))) '(false))))
+  (cons and (cons Op1 (cons Ops '())))
+  ->
+  (cons 'if (cons Op1 (cons (cons 'if (cons Ops '(true false))) '(false)))))
 
-(define or-wrapper
-  (curry
-   (lambda (value thunk)
-     (if value #t (thunk)))))
-
-(define-syntax shen-and
-  (syntax-parser
-    [(_ a) #'(and-wrapper a)]
-    [(_ a b) #'(and-wrapper a (thunk (if b #t #f)))]
-    [(_ a b . cs) #'(and-wrapper a (thunk (shen-and b . cs)))]
-    [_:id #'and-wrapper]))
-
-(define-syntax shen-or
-  (syntax-parser
-    [(_ a) #'(or-wrapper a)]
-    [(_ a b) #'(or-wrapper a (thunk (if b #t #f)))]
-    [(_ a b . cs) #'(or-wrapper a (thunk (shen-or b . cs)))]
-    [_:id #'or-wrapper]))
+(defmacro shen.or-right-assoc-macro
+  (cons or (cons Op1 (cons Op2 (cons Op3 Ops))))
+  ->
+  (cons 'if (cons Op1 (cons 'true (cons (cons 'or (cons Op2 (cons Op3 Ops))) '()))))
+  (cons or (cons Op1 (cons Ops '())))
+  ->
+  (cons 'if (cons Op1 (cons 'true (cons Ops '())))))
 
 (define-syntax set
   (syntax-parser
@@ -103,9 +97,6 @@
 
 (define (map fn list)
   (r:map (function fn) list))
-
-(define (foldr fn acc list)
-  (r:foldr (function fn) acc list))
 
 (define (cd string)
   (current-directory string))
@@ -174,7 +165,7 @@
      (map string (string->list data))]
     [(? vector?)
      (append '("<")
-             (apply append (vector->list (vector-map explode data)))
+             (apply append (add-between (vector->list (vector-map explode data)) '(" ")))
              '(">"))]
     [(? symbol?)
      (explode (symbol->string data))]
@@ -190,4 +181,12 @@
              '(" | ")
              (explode tail)
              '("]"))]))
+
+(define (atom? value)
+  (or (boolean? value)
+      (number? value)
+      (string? value)
+      (symbol? value)))
+
+
 

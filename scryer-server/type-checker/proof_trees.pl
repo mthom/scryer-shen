@@ -11,7 +11,7 @@ verify_proof_tree(Tree) :-
     proved_tree_list(EmptyTree, ProvenTree, ProofTerms),
     maplist(check_pending_proof(ProvenTree), ProofTerms).
 
-check_pending_proof(ProvenTree, pending(Hyps, G)) :-
+check_pending_proof(ProvenTree, pending(Hyps, g(G))) :-
     get_assoc(G, ProvenTree, HypsList),
     member(CHyps, HypsList),
     ord_subset(Hyps, CHyps).
@@ -69,13 +69,17 @@ goals_proof_status(Hyps, [G|Gs], ProofStatus) -->
     goals_proof_status(Hyps, Gs, ProofStatus).
 
 sub_proof_propagation(Hyps, pending, pending, G) -->
-    [pending(Hyps, G)].
+    [pending(Hyps, g(G))].
 sub_proof_propagation(Hyps, proved, _ProofStatus, G) -->
     [proved(Hyps, G)].
 
-goal_proof_status(Hyps, Node, ProofStatus) -->
+goal_proof_status(Hyps, Node, _ProofStatus) -->
     { Node =.. [t, g(G), SubProofStatus | _] },
-    sub_proof_propagation(Hyps, SubProofStatus, ProofStatus, G).
+    (  { SubProofStatus == proved } ->
+       sub_proof_propagation(Hyps, proved, _ProofStatus, G)
+    ;  !,
+       []
+    ).
 goal_proof_status(Hyps0, t(discharged(Hyp), SubProofStatus, SubNode), ProofStatus) -->
     { SubNode =.. [t, g(G) | _],
       append_hyps(Hyps0, discharged(Hyp), Hyps) },
