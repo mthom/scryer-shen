@@ -190,7 +190,13 @@
       (symbol? value)))
 
 (define (fix f)
-  (procedure-rename (lambda (x) ((fix f) x)) '<thunk>))
+  (procedure-rename (letrec ([fix-help (lambda (x)
+                                         (let ([result (f x)])
+                                           (if (equal? result x)
+                                               x
+                                               (fix-help result))))])
+                      fix-help)
+                    '<thunk>))
 
 (define (fst tuple)
   (vector-ref (shen-tuple-args tuple) 0))
