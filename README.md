@@ -83,9 +83,9 @@ and `*(N,F1)` while s-expressions annotate either Shen function calls
 or Prolog predicate calls as in standard Shen Prolog.
 
 Scryer Shen Prolog predicates and queries are converted to ISO Prolog
-and streamed to the Scryer Prolog subprocess. The interaction between
-Scryer Shen and Scryer Prolog is displayed in the Scryer Prolog Debug
-Window, which for the above interaction is
+syntax and streamed to the Scryer Prolog subprocess. The interaction
+between Scryer Shen and Scryer Prolog is displayed in the Scryer
+Prolog Debug Window, which for the above interaction is
 
 ![Scryer Prolog Debug Window](screenshots/debug_window.png)
 

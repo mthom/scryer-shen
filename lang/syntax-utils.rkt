@@ -198,6 +198,14 @@
      #:declare type-sig (shen-function-type-sig #:type-datum type-datum?
                                                 #:untagged-vars untagged-vars?)
      #'(#%prolog-functor --> type-sig.type ...)]
+    [((~datum #%prolog-functor) id:id . args)
+     #:with (arg-term ...) (stx-map (lambda (stx)
+                                      (syntax->shen-prolog-term
+                                       stx
+                                       type-datum?
+                                       untagged-vars?))
+                                    #'args)
+     #'(#%prolog-functor id arg-term ...)]
     [(f first-arg arg ...)
      #:when type-datum?
      #:with fn-term       (syntax-parse #'f
