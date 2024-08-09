@@ -104,9 +104,13 @@
 
 (define (load filename)
   (define in (open-input-file filename))
-  (parameterize ([current-readtable shen-readtable])
-    (for ([stx (in-port (curry read-syntax (object-name in)) in)])
-      (load-shen-form (detect-prolog-syntax (expand-shen-form stx)))
-      (printf "\n")))
-  (close-input-port in)
+  (dynamic-wind
+    (thunk (void))
+    (thunk
+     (parameterize ([current-readtable shen-readtable])
+       (for ([stx (in-port (curry read-syntax (object-name in)) in)])
+         (load-shen-form (detect-prolog-syntax (expand-shen-form stx)))
+         (printf "\n"))))
+     (thunk
+      (close-input-port in)))
   'loaded)
