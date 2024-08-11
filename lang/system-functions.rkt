@@ -108,7 +108,7 @@
   (filter (lambda (e) (not (member e list-2 equal?))) list-1))
 
 (define (element? e list)
-  (member e list equal?))
+  (if (member e list equal?) #t #f))
 
 (define (eval-kl expr)
   (r:eval expr
