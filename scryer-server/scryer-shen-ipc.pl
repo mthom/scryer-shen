@@ -3,8 +3,6 @@
 :- use_module(library(between)).
 :- use_module(library(charsio)).
 :- use_module(library(cont)).
-:- use_module(library(dcgs)).
-:- use_module(library(format)).
 :- use_module(library(iso_ext)).
 :- use_module(library(lambda)).
 :- use_module(library(lists)).
@@ -92,22 +90,22 @@ list_dot_functor([], []).
 list_dot_functor([T|Ts], '.'(T, Us)) :-
     list_dot_functor(Ts, Us).
 
-shen_functor(T, T) :-
+functor_shen_expr(T, T) :-
     (  atomic(T)
     ;  var(T)
     ),
     !.
-shen_functor([T|Ts], '.'('.', U, Us)) :-
-    shen_functor(T, U),
-    shen_functor(Ts, Us),
+functor_shen_expr([T|Ts], '.'('.', U, Us)) :-
+    functor_shen_expr(T, U),
+    functor_shen_expr(Ts, Us),
     !.
-shen_functor(T, '.'(F, Vs)) :-
+functor_shen_expr(T, '.'(F, Vs)) :-
     T =.. [F | Ts],
-    maplist(shen_functor, Ts, Us),
+    maplist(functor_shen_expr, Ts, Us),
     list_dot_functor(Us, Vs).
 
 function_eval(bind(F,X), VNs) :-
-    shen_functor(F, SF),
+    functor_shen_expr(F, SF),
     write_canonical_term_wq([SF, true], VNs), % write to scryer-shen
                                               % which is listening to
                                               % stdout ...
@@ -115,10 +113,10 @@ function_eval(bind(F,X), VNs) :-
     read(X).                          % .. and block until the result
                                       % is read back from scryer-shen.
 function_eval(return_to_shen(T), VNs) :-
-    shen_functor(T, TF),
+    functor_shen_expr(T, TF),
     write_canonical_term_wq([TF, false], VNs),
     nl.
 function_eval(type_check_return_to_shen(T), VNs) :-
-    shen_functor(T, TF),
+    functor_shen_expr(T, TF),
     write_canonical_term_wq([[type_functor, TF]], VNs),
     nl.

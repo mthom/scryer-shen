@@ -87,7 +87,8 @@
            #:cut
            #:with condition (syntax->shen-prolog-term #'condition-term #f #t)
            #:with implicative #'()
-           #:with shen-prolog-terms #'((#%prolog-functor g (#%prolog-functor shift_bind condition))))
+           #:with shen-prolog-terms #'((#%prolog-functor g (#%prolog-functor shen_if_condition
+                                                                             condition))))
   (pattern (~seq (~datum let) id:shen-var-id datum:expr)
            #:cut
            #:with implicative #'()
