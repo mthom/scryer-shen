@@ -128,7 +128,8 @@ chain_proof([t|Is], SuccIs, AL, SuccAL, Hs, SuccHs, SubTs, SuccSubTs, [C|Cs]) --
          succ_ancestor_list(C, AL, NewAL),
          SubTs = [SubT | RSubTs] },
        chain_proof(Is, SuccIs, NewAL, SuccAL, NewHs, SuccHs, RSubTs, SuccSubTs, Cs)
-    ;  [C],
+    ;  { C = h(_) },
+       [C],
        chain_proof(Is, SuccIs, AL, SuccAL, Hs, SuccHs, SubTs, SuccSubTs, Cs)
     ).
 
