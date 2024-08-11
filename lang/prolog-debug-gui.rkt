@@ -45,6 +45,13 @@
 
       (send frame show #t)
 
+      (add-text-keymap-functions (send scryer-prolog-text get-keymap))
+
+      (send (send scryer-prolog-text get-keymap)
+            map-function
+            "c:c"
+            "copy-clipboard")
+
       (define debug-output-port
         (open-output-text-editor scryer-prolog-text #:eventspace prolog-debug-es))
 
