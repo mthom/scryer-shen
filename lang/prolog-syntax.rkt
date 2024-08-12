@@ -57,13 +57,13 @@
                             (let ([hd (shift-args #'hd #f)]
                                   [tl (stx-map (lambda (stx) (shift-args stx #f)) #'tl)]
                                   [result-binding (gensym "G")])
-                              (write-string "cont:shift(bind(" string-port)
+                              (write-string "ipc:bind(" string-port)
                               (write-prolog-datum hd)
                               (write-string "(" string-port)
                               (write-prolog-goals tl #f)
                               (write-string "), " string-port)
                               (write result-binding string-port)
-                              (write-string ")), " string-port)
+                              (write-string "), " string-port)
 
                               (datum->syntax stx result-binding stx))]
                            [form #'form]))]
@@ -133,15 +133,15 @@
                                    [((~datum return) t)
                                     #:when top-level?
                                     (let ([t (shift-args #'t)])
-                                      (write-string "cont:shift(return_to_shen(" string-port)
+                                      (write-string "ipc:return_to_shen(" string-port)
                                       (write-prolog-datum t)
-                                      (write-string "))" string-port))]
+                                      (write-string ")" string-port))]
                                    [((~datum type-check-return) t)
                                     #:when top-level?
                                     (let ([t (shift-args #'t)])
-                                      (write-string "cont:shift(type_check_return_to_shen(" string-port)
+                                      (write-string "ipc:type_check_return_to_shen(" string-port)
                                       (write-prolog-datum t)
-                                      (write-string "))" string-port))]
+                                      (write-string ")" string-port))]
                                    [((~datum var?) t)
                                     #:when top-level?
                                     (let ([t (shift-args #'t)])

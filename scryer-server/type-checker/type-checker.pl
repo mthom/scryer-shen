@@ -7,6 +7,8 @@
 :- use_module(library(lambda)).
 :- use_module(library(lists)).
 
+:- use_module('../scryer-shen-ipc').
+
 :- use_module(proof_trees).
 :- use_module(inference_rules).
 :- use_module(rule_expanders).
@@ -79,7 +81,7 @@ depth_iterated_proof(Goal, ProofTree, Status, Inferences) :-
 
 
 shen_if_condition(G) :-
-    cont:shift(bind(G, F)),
+    bind(G, F),
     F \== false.
 
 precedent_check(_AncestorList, Hyps, Goal, assumed(g(Goal))) :-

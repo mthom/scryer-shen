@@ -1,8 +1,11 @@
-:- module('$scryer-shen-ipc', [continue/2, write_error/1]).
+:- module(ipc, [bind/2,
+                continue/2,
+                return_to_shen/1,
+                type_check_return_to_shen/1,
+                write_error/1]).
 
 :- use_module(library(between)).
 :- use_module(library(charsio)).
-:- use_module(library(cont)).
 :- use_module(library(iso_ext)).
 :- use_module(library(lambda)).
 :- use_module(library(lists)).
@@ -10,16 +13,42 @@
 :- meta_predicate continue(0, ?).
 
 continue(Query, VNs) :-
-    reset(Query, Ball, Cont),
-    (  var(Ball) ->
-       write([true, false]),
+    bb_put('#%variable_names', VNs),
+    (  catch(Query, '#%return_success'(P), return_handler(P)) ->
+       (  var(P) ->
+          write([true, false]),
+          nl
+       ;  true
+       )
+    ;  write([false, false]),
        nl
-    ;  pause_or_return(Cont, Ball, VNs)
-    ),
-    !.
-continue(_, _) :-
-    write([false, false]),
-    nl.
+    ).
+
+return_handler(Printer) :-
+    callable(Printer),
+    call(Printer).
+
+bind(F, X) :-
+    bb_get('#%variable_names', VNs),
+    functor_shen_expr(F, SF),
+    write_canonical_term_wq([SF, true], VNs), % write to scryer-shen
+                                              % which is listening to
+                                              % stdout ...
+    nl,
+    read(X). % .. and block until the result is read back from
+             % scryer-shen.
+
+return_to_shen(T) :-
+    bb_get('#%variable_names', VNs0),
+    variable_labels(T, VNs0, VNs),
+    functor_shen_expr(T, TF),
+    throw('#%return_success'((ipc:write_canonical_term_wq([TF, false], VNs), nl))).
+
+type_check_return_to_shen(T) :-
+    bb_get('#%variable_names', VNs0),
+    variable_labels(T, VNs0, VNs),
+    functor_shen_expr(T, TF),
+    throw('#%return_success'((ipc:write_canonical_term_wq([[type_functor, TF]], VNs), nl))).
 
 write_canonical_term_wq(Term, VNs) :-
     write_term(Term, [ignore_ops(true), variable_names(VNs),
@@ -35,7 +64,6 @@ eq_list_match(L, [_|VNs], V) :-
 
 label_matches(_, [], [], _).
 label_matches(VNs0, [L=V1|VNs1], Matches, N) :-
-    !,
     N1 is N+1,
     (  eq_list_match(L, VNs0, V0),
        V0 \== V1 ->
@@ -73,19 +101,6 @@ variable_labels(Term, VNs0, VNs) :-
     length(TermVars, NumVars0),
     matching_variable_labels_loop(TermVars, NumVars0, 0, VNs0, VNs).
 
-pause_or_return(none, Ball, VNs) :-
-    function_eval(Ball, VNs).
-pause_or_return(cont(Cont), bind(F,X), VNs) :-
-    !,
-    function_eval(bind(F,X), VNs),
-    continue(Cont, VNs).
-pause_or_return(cont(_Cont), return_to_shen(T), VNs0) :-
-    variable_labels(T, VNs0, VNs),
-    function_eval(return_to_shen(T), VNs).
-pause_or_return(cont(_Cont), type_check_return_to_shen(T), VNs0) :-
-    variable_labels(T, VNs0, VNs),
-    function_eval(type_check_return_to_shen(T), VNs).
-
 list_dot_functor([], []).
 list_dot_functor([T|Ts], '.'(T, Us)) :-
     list_dot_functor(Ts, Us).
@@ -103,20 +118,3 @@ functor_shen_expr(T, '.'(F, Vs)) :-
     T =.. [F | Ts],
     maplist(functor_shen_expr, Ts, Us),
     list_dot_functor(Us, Vs).
-
-function_eval(bind(F,X), VNs) :-
-    functor_shen_expr(F, SF),
-    write_canonical_term_wq([SF, true], VNs), % write to scryer-shen
-                                              % which is listening to
-                                              % stdout ...
-    nl,
-    read(X).                          % .. and block until the result
-                                      % is read back from scryer-shen.
-function_eval(return_to_shen(T), VNs) :-
-    functor_shen_expr(T, TF),
-    write_canonical_term_wq([TF, false], VNs),
-    nl.
-function_eval(type_check_return_to_shen(T), VNs) :-
-    functor_shen_expr(T, TF),
-    write_canonical_term_wq([[type_functor, TF]], VNs),
-    nl.

@@ -88,6 +88,3 @@ between Scryer Shen and Scryer Prolog is displayed in the Scryer
 Prolog Debug Window, which for the above interaction is
 
 ![Scryer Prolog Debug Window](screenshots/debug_window.png)
-
-Scryer Prolog's delimited continuations library `cont` is used to
-interact with Scryer Shen using the `reset` and `shift` primitives.
