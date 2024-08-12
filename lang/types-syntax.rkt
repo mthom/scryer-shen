@@ -33,17 +33,17 @@
   (pattern (~seq var (~literal :) (~literal number))
            #:do [(tag-functor-syntax! #'num #'number)]
            #:with var-term (syntax->shen-prolog-term #'var #t #t)
-           #:with datum #'(#%prolog-functor number var-term)
+           #:with datum #'(#%prolog-functor #%number var-term)
            #:with type  #'number)
   (pattern (~seq str (~literal :) (~literal string))
            #:do [(tag-functor-syntax! #'str #'string)]
            #:with str-term (syntax->shen-prolog-term #'str #t #t)
-           #:with datum #'(#%prolog-functor string str-term)
+           #:with datum #'(#%prolog-functor #%string str-term)
            #:with type  #'string)
   (pattern (~seq sym (~literal :) (~literal symbol))
            #:do [(tag-functor-syntax! #'sym #'symbol)]
            #:with sym-term (syntax->shen-prolog-term #'sym #t #t)
-           #:with datum #'(#%prolog-functor symbol sym-term)
+           #:with datum #'(#%prolog-functor #%symbol sym-term)
            #:with type  #'symbol)
   (pattern (~seq datum-term (~literal :) type-term)
            #:with datum (syntax->shen-prolog-term #'datum-term #t #t)

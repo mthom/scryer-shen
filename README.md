@@ -88,3 +88,43 @@ between Scryer Shen and Scryer Prolog is displayed in the Scryer
 Prolog Debug Window, which for the above interaction is
 
 ![Scryer Prolog Debug Window](screenshots/debug_window.png)
+
+# An example interaction
+
+The loaded files are found in [examples](https://github.com/mthom/scryer-shen/tree/master/examples).
+
+```shen
+(0-) (tc +)
+true
+
+(1+) (load "examples/days.shen")
+days#type
+next-day : (day --> day)
+loaded : symbol
+
+(2+) (load "examples/apply.shen")
+h-list-to-function-sig
+heterogeneous-lists#type
+true
+heterogeneously-mappable-functions#type
+apply : ((h-mappable [A | B] C) --> ((h-list [A | B]) --> C))
+loaded : symbol
+
+(3+) (apply + [1 2 3])
+type error
+
+(4+) (apply + [1 2])
+3 : number
+
+(5+) [1 saturday]
+[1 saturday] : (h-list [number symbol])
+
+(6+) (apply + [1])
+curried:+ : (number --> number)
+
+(7+) (apply +)
+curried:apply : ((h-list [number]) --> (number --> number))
+
+(8+) (fn apply)
+apply : ((h-mappable [A | B] C) --> ((h-list [A | B]) --> C))
+```

@@ -23,16 +23,19 @@
     (printer arg port)))
 
 (define (cons-contents args)
-  (for/list ([arg (in-generator
-                   (let loop ([args args])
-                     (match args
-                       [(list 'cons a d)
-                        (yield a)
-                        (unless (empty? d)
-                          (loop d))]
-                       [_
-                        (yield args)])))])
-    arg))
+  (foldr (lambda (item acc) (if (void? acc) item (cons item acc)))
+         (void)
+         (for/list ([arg (in-generator
+                          (let loop ([args args])
+                            (match args
+                              [(list 'cons a d)
+                               (yield a)
+                               (if (empty? d)
+                                   (yield d)
+                                   (loop d))]
+                              [_
+                               (yield args)])))])
+           arg)))
 
 (define/contract (type-printer datum port)
   (any/c output-port? . -> . any)

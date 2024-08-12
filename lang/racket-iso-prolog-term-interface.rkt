@@ -104,7 +104,7 @@
        (write-shen-term d)
        (write-string "]" output-port)]
       [(list 'clause (list 'atom '|'.'|)
-             (list 'term (list 'atom 'apply))
+             (list 'term (list 'atom '|'#%apply'|))
              clause)
        (write-string "[" output-port)
        (for ([subterm (in-list (subterms clause))]
@@ -113,7 +113,7 @@
          (write-shen-term subterm))
        (write-string "]" output-port)]
       [(list 'clause (list 'atom '|'.'|)
-             (list 'term (list 'atom (or 'number 'string 'symbol 'string '?)))
+             (list 'term (list 'atom (or '|'#%number'| '|'#%string'| '|'#%symbol'| '|'#%string'| '|'#%?'|)))
              (list 'term (list 'clause (list 'atom '|'.'|)
                                (list 'term (list _ value))
                                (list 'term (list 'atom '|[]|)))))
@@ -162,4 +162,4 @@
 ;; (parse-to-datum (apply-tokenizer-maker make-tokenizer "term"))
 ;; (parse-to-datum (apply-tokenizer-maker make-tokenizer "term(b,c,[])"))
 ;; (parse-to-datum (apply-tokenizer-maker make-tokenizer "'.'('.'(type_functor,'.'('.'('h-list','.'('.'('.',number,'.'('.',symbol,[])),[])),[])),[])"))
-;; (parse-to-datum (apply-tokenizer-maker make-tokenizer "'.'('.'('element?','.'('.'(apply,'.'('.'(apply,'.'('.'(fn,'.'(apply,[])),'.'('.'(symbol,'.'(+,[])),[]))),'.'('.'('.','.'(number,'.'(1,[])),'.'('.','.'(number,'.'(2,[])),'.'('.','.'(number,'.'(3,[])),[]))),[]))),'.'('.'('.',monday,'.'('.',tuesday,'.'('.',wednesday,'.'('.',thursday,'.'('.',friday,'.'('.',saturday,'.'('.',sunday,[]))))))),[]))),'.'(true,[]))"))
+;; (parse-to-datum (apply-tokenizer-maker make-tokenizer "'.'('.'('element?','.'('.'('#%symbol','.'(tuesday,[])),'.'('.'('.',monday,'.'('.',tuesday,'.'('.',wednesday,'.'('.',thursday,'.'('.',friday,'.'('.',saturday,'.'('.',sunday,[]))))))),[]))),'.'(true,[]))"))

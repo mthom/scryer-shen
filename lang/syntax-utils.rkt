@@ -89,11 +89,11 @@
      #'<>]
     [str:string
      (if type-datum?
-         #'(#%prolog-functor string str)
+         #'(#%prolog-functor #%string str)
          #'str)]
     [num:number
      (if type-datum?
-         #'(#%prolog-functor number num)
+         #'(#%prolog-functor #%number num)
          #'str)]
     [sym:shen-var-id
      (if type-datum?
@@ -102,10 +102,10 @@
     [(~and sym:id
            ;; (~not :shen-var-id)
            (~not (~literal #%prolog-functor))
-           (~not (~literal apply)))
+           (~not (~literal #%apply)))
      #:when (not (shen-special-form? #'sym))
      (if type-datum?
-         #'(#%prolog-functor symbol sym)
+         #'(#%prolog-functor #%symbol sym)
          #'sym)]
     [((~datum fn) arg:id)
      #'(#%prolog-functor fn arg)]
@@ -177,7 +177,7 @@
     [((~datum /.) var:shen-var-id remaining-var:shen-var-id ... body-expr:expr)
      #:with id-shen-prolog-term
      (if (and type-datum? (not untagged-vars?))
-         #'(#%prolog-functor ? var)
+         #'(#%prolog-functor #%? var)
          (syntax->shen-prolog-term #'var type-datum? untagged-vars?))
      #:with expr-shen-prolog-term
      (parameterize ([local-pattern-variables (list* (syntax->datum #'var)
@@ -212,7 +212,7 @@
                             [(~and id:id (~not :shen-var-id))
                              #'(#%prolog-functor fn id)]
                             [term (syntax->shen-prolog-term #'term type-datum? untagged-vars?)])
-     #:with inner-apply #`(#%prolog-functor apply
+     #:with inner-apply #`(#%prolog-functor #%apply
                                             fn-term
                                             #,(syntax->shen-prolog-term #'first-arg
                                                                         type-datum?
@@ -224,7 +224,7 @@
                                        untagged-vars?))
                                     #'(arg ...))
      (foldl (lambda (arg-term acc)
-              #`(#%prolog-functor apply #,acc #,arg-term))
+              #`(#%prolog-functor #%apply #,acc #,arg-term))
             #'inner-apply
             (syntax->list #'(arg-term ...)))]
     [((~and a:id (~not :shen-var-id)) d ...+)
@@ -273,8 +273,8 @@
          #`(#%prolog-functor
             #,(if (memf (lambda (var) (equal? datum var))
                         (local-pattern-variables))
-                  #'?
-                  #'symbol)
+                  #'#%?
+                  #'#%symbol)
             #,datum-term)]
         [else datum-term]))
 

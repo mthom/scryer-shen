@@ -7,18 +7,18 @@
 :- discontiguous(type_check/4).
 :- multifile(type_check/4).
 
-type_check(? X, T) -->
+type_check('#%?' X, T) -->
     { of_type(? X, T) }.
 type_check([], list(_A)) --> [].
 type_check(true, boolean) --> [].
 type_check(false, boolean) --> [].
-type_check(string(X), string) -->
-    { value_type(string(X), string) }.
-type_check(number(X), number) -->
-    { value_type(number(X), number) }.
-type_check(symbol(X), symbol) -->
-    { value_type(symbol(X), symbol) }.
-type_check(symbol(F), FnT) -->
+type_check('#%string'(X), string) -->
+    { value_type('#%string'(X), string) }.
+type_check('#%number'(X), number) -->
+    { value_type('#%number'(X), number) }.
+type_check('#%symbol'(X), symbol) -->
+    { value_type('#%symbol'(X), symbol) }.
+type_check('#%symbol'(F), FnT) -->
     [g(declare(F, FnT))].
 type_check([X|Xs], list(A)) -->
     [g(type_check(X, A)),
@@ -46,10 +46,10 @@ type_check(if(Condition, TrueBranch, FalseBranch), A) -->
     [g(type_check(Condition, boolean)),
      g(type_check(TrueBranch, A)),
      g(type_check(FalseBranch, A))].
-type_check(apply(F, X), B) -->
+type_check('#%apply'(F, X), B) -->
     [g(type_check(F, (A --> B))),
      g(type_check(X, A))].
-type_check(apply(F), R) -->
+type_check('#%apply'(F), R) -->
     [g(type_check(F, -->(R)))].
 type_check(fn(F), A) -->
     [g(declare(F, A))].

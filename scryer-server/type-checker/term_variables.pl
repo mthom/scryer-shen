@@ -1,6 +1,6 @@
 :- module(term_variables, [of_type/2,
                            op(1200, fx, -->),
-                           op(599, fx, ?),
+                           op(599, fx, '#%?'),
                            term/1,
                            value_type/2]).
 
@@ -23,10 +23,10 @@ verify_attributes(Var, Other, []) :-
     ;  false
     ).
 
-unwrap_literal(?(A), A).
-unwrap_literal(number(A), A).
-unwrap_literal(string(A), A).
-unwrap_literal(symbol(A), A).
+unwrap_literal('#%?'(A), A).
+unwrap_literal('#%number'(A), A).
+unwrap_literal('#%string'(A), A).
+unwrap_literal('#%symbol'(A), A).
 
 of_type(Lit, T) :-
     unwrap_literal(Lit, X),
