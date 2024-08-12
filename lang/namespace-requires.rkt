@@ -29,11 +29,3 @@
 (namespace-require `(only ,module-path-to-expander <> @p @s @v /. cond datatype define defmacro
                           defprolog false if let package prolog? true)
                    shen-namespace)
-
-(namespace-require `(rename ,module-path-to-interposition-points #%app app) shen-prolog-namespace)
-(namespace-require `(rename ,module-path-to-interposition-points #%top top) shen-prolog-namespace)
-(namespace-require '(only racket/base #%datum) shen-prolog-namespace)
-(namespace-require module-path-to-system-function-exports shen-prolog-namespace)
-(namespace-require `(for-space function ,module-path-to-system-function-exports) shen-prolog-namespace)
-(namespace-require `(only ,module-path-to-expander @p @s @v /. cond false if let prolog? true)
-                   shen-prolog-namespace)

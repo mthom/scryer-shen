@@ -21,12 +21,6 @@
   (fprintf scryer-prolog-log-out "?- ")
   (fprintf scryer-prolog-out "[user].~n~a~nend_of_file.~n" iso-prolog-code))
 
-(for ([tag (in-list '(symbol string number ?))])
-  (namespace-set-variable-value! tag identity #t shen-prolog-namespace))
-
-(define (shen-prolog-eval form)
-  (eval form shen-prolog-namespace))
-
 (define (run-prolog-query! iso-prolog-query)
   (fprintf scryer-prolog-log-out "?- ")
   (fprintf scryer-prolog-out "shen_prolog_eval((~a)).~n" iso-prolog-query)
@@ -45,7 +39,7 @@
          #f]
         [(or (list fn-call continue?)
              (list 'cons fn-call (list 'cons continue? '())))
-         (define result (shen-prolog-eval fn-call))
+         (define result (eval fn-call shen-namespace))
          (if (eq? continue? 'true)
              (begin
                (write-as-prolog-datum result scryer-prolog-out)
