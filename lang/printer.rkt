@@ -10,24 +10,36 @@
 
 (define (print-cons-contents args port printer)
   (for ([arg (in-generator
-              (let loop ([pair args])
-                (cond [(cons? pair)
-                       (yield (car pair))
-                       (loop (cdr pair))]
-                      [else
-                       (unless (empty? pair)
-                         (write-string " |" port)
-                         (yield pair))])))]
-        [space (sequence-append (in-value "") (in-cycle '(#\space)))])
+               (let loop ([pair args])
+                 (cond [(cons? pair)
+                        (yield (car pair))
+                        (loop (cdr pair))]
+                       [else
+                        (unless (empty? pair)
+                          (write-string " |" port)
+                          (yield pair))])))]
+         [space (sequence-append (in-value "") (in-cycle '(#\space)))])
     (fprintf port "~a" space)
     (printer arg port)))
+
+(define (cons-contents args)
+  (for/list ([arg (in-generator
+                   (let loop ([args args])
+                     (match args
+                       [(list 'cons a d)
+                        (yield a)
+                        (unless (empty? d)
+                          (loop d))]
+                       [_
+                        (yield args)])))])
+    arg))
 
 (define/contract (type-printer datum port)
   (any/c output-port? . -> . any)
   (match datum
     [(list 'cons a d)
      (write-char #\[ port)
-     (print-cons-contents (cons a d) port type-printer)
+     (print-cons-contents (cons-contents datum) port type-printer)
      (write-char #\] port)]
     [(list '--> a d)
      (write-string "(" port)

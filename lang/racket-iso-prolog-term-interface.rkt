@@ -144,3 +144,4 @@
 ;; (parse-to-datum (apply-tokenizer-maker make-tokenizer "'.'(number,'.'(false,[]))"))
 ;; (parse-to-datum (apply-tokenizer-maker make-tokenizer "term"))
 ;; (parse-to-datum (apply-tokenizer-maker make-tokenizer "term(b,c,[])"))
+;; (parse-to-datum (apply-tokenizer-maker make-tokenizer "'.'('.'(type_functor,'.'('.'('h-list','.'('.'('.',number,'.'('.',symbol,[])),[])),[])),[])"))
