@@ -31,19 +31,31 @@
                                (read-char scryer-prolog-in) ;; read trailing newline
                                #f)])
     (let loop ()
+      (define (continue result)
+        (write-as-prolog-datum result scryer-prolog-out)
+        (fprintf scryer-prolog-out ".~n")
+        (loop))
+
+      (define (bind fn-call continue?)
+        (define result (eval fn-call shen-namespace))
+        (if (eq? continue? 'true)
+            (continue result)
+            result))
+
       (peek-for-prolog-warning)
+
       (match (read-iso-prolog-term scryer-prolog-in)
         [(list (list 'type-functor type))
          type]
         [(list 'type-check-error _)
          #f]
+        [(list 'if-bind fn-call continue?)
+         (with-handlers ([exn:fail? (lambda (_)
+                                      (if (eq? continue? 'true)
+                                          (continue 'false)
+                                          #f))])
+           (bind fn-call continue?))]
         [(or (list fn-call continue?)
              (list 'cons fn-call (list 'cons continue? '())))
-         (define result (eval fn-call shen-namespace))
-         (if (eq? continue? 'true)
-             (begin
-               (write-as-prolog-datum result scryer-prolog-out)
-               (fprintf scryer-prolog-out ".~n")
-               (loop))
-             result)]
+         (bind fn-call continue?)]
         [_ #f]))))

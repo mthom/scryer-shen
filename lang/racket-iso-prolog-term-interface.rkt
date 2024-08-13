@@ -87,12 +87,22 @@
                           [term (yield term)])))])
       term))
 
+  (define (cons-contents char-list)
+    (match char-list
+      [(list 'cons a d) (cons a (cons-contents d))]
+      [_ empty]))
+
   (let write-shen-term ([term-tree term-tree])
     (match term-tree
       [(list 'term inner-term)
        (write-shen-term inner-term)]
-      [(list (or 'atom 'variable) atom)
+      [(list 'atom atom)
        (write-string (un-bar-bracket atom) output-port)]
+      [(list 'variable var)
+       (let ([var-string (symbol->string var)])
+         (if (equal? (string-ref var-string 0) #\_)
+             (write-string var-string output-port)
+             (write-string (un-bar-bracket var) output-port)))]
       [(list (or 'number 'string) datum)
        (write datum output-port)]
       [(list 'clause (list 'atom '|'.'|)
@@ -112,8 +122,18 @@
          (fprintf output-port "~a" space)
          (write-shen-term subterm))
        (write-string "]" output-port)]
-      [(list 'clause (list 'atom '|'.'|)
-             (list 'term (list 'atom (or '|'#%number'| '|'#%string'| '|'#%symbol'| '|'#%string'| '|'#%?'|)))
+      [(list 'clause
+             (list 'atom '|'.'|)
+             (list 'term (list 'atom '|'#%string'|))
+             (list 'term (list 'clause (list 'atom '|'.'|)
+                               value
+                               (list 'term (list 'atom '|[]|)))))
+       (write (let ([char-list (iso-prolog-term->shen-expr value)])
+                (apply string-append (map symbol->string (cons-contents char-list))))
+              output-port)]
+      [(list 'clause
+             (list 'atom '|'.'|)
+             (list 'term (list 'atom (or '|'#%number'| '|'#%symbol'| '|'#%?'|)))
              (list 'term (list 'clause (list 'atom '|'.'|)
                                (list 'term (list _ value))
                                (list 'term (list 'atom '|[]|)))))
@@ -163,3 +183,4 @@
 ;; (parse-to-datum (apply-tokenizer-maker make-tokenizer "term(b,c,[])"))
 ;; (parse-to-datum (apply-tokenizer-maker make-tokenizer "'.'('.'(type_functor,'.'('.'('h-list','.'('.'('.',number,'.'('.',symbol,[])),[])),[])),[])"))
 ;; (parse-to-datum (apply-tokenizer-maker make-tokenizer "'.'('.'('element?','.'('.'('#%symbol','.'(tuesday,[])),'.'('.'('.',monday,'.'('.',tuesday,'.'('.',wednesday,'.'('.',thursday,'.'('.',friday,'.'('.',saturday,'.'('.',sunday,[]))))))),[]))),'.'(true,[]))"))
+;; "'.'('.'('element?','.'('.'('@s','.'('.'('#%symbol','.'(_141760,[])),'.'('.'('#%string','.'('.'('.',a,'.'('.',s,[])),[])),[]))),'.'('.'('.',monday,'.'('.',tuesday,'.'('.',wednesday,'.'('.',thursday,'.'('.',friday,'.'('.',saturday,'.'('.',sunday,[]))))))),[]))),'.'(true,[]))"

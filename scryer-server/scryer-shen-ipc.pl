@@ -1,5 +1,6 @@
 :- module(ipc, [bind/2,
                 continue/2,
+                if_bind/2,
                 return_to_shen/1,
                 type_check_return_to_shen/1,
                 write_error/1]).
@@ -37,6 +38,13 @@ bind(F, X) :-
     nl,
     read(X). % .. and block until the result is read back from
              % scryer-shen.
+
+if_bind(F, X) :-
+    bb_get('#%variable_names', VNs),
+    functor_shen_expr(F, SF),
+    write_canonical_term_wq([if_bind, SF, true], VNs),
+    nl,
+    read(X).
 
 return_to_shen(T) :-
     bb_get('#%variable_names', VNs0),

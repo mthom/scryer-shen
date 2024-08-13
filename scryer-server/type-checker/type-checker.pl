@@ -81,7 +81,7 @@ depth_iterated_proof(Goal, ProofTree, Status, Inferences) :-
 
 
 shen_if_condition(G) :-
-    bind(G, F),
+    if_bind(G, F),
     F \== false.
 
 precedent_check(_AncestorList, Hyps, Goal, assumed(g(Goal))) :-

@@ -8,7 +8,7 @@
 :- multifile(type_check/4).
 
 type_check('#%?' X, T) -->
-    { of_type(? X, T) }.
+    { of_type('#%?' X, T) }.
 type_check([], list(_A)) --> [].
 type_check(true, boolean) --> [].
 type_check(false, boolean) --> [].
@@ -40,7 +40,7 @@ type_check(/.(Var, Body), (A --> B)) -->
      g(type_check(Body, B))].
 type_check(let(Var, Binding, Body), A) -->
     [g(type_check(Binding, B)),
-     h(exists(Var, B)),
+     h(type_check(Var, B)),
      g(type_check(Body, A))].
 type_check(if(Condition, TrueBranch, FalseBranch), A) -->
     [g(type_check(Condition, boolean)),

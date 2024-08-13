@@ -158,7 +158,7 @@
                          else-term)]
     [((~datum let) first-b:shen-binding remaining-b ... body-expr:expr)
      #:with id-shen-prolog-term (if (and type-datum? (not untagged-vars?))
-                                    #'(#%prolog-functor ? first-b.id)
+                                    #'(#%prolog-functor #%? first-b.id)
                                     (syntax->shen-prolog-term #'first-b.id
                                                               type-datum?
                                                               untagged-vars?))
