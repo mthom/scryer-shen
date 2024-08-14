@@ -31,7 +31,7 @@ return_handler(Printer) :-
 
 bind(F, X) :-
     bb_get('#%variable_names', VNs),
-    functor_shen_expr(F, SF),
+    executable_functor_shen_expr(F, SF),
     write_canonical_term_wq([SF, true], VNs), % write to scryer-shen
                                               % which is listening to
                                               % stdout ...
@@ -41,7 +41,7 @@ bind(F, X) :-
 
 if_bind(F, X) :-
     bb_get('#%variable_names', VNs),
-    functor_shen_expr(F, SF),
+    executable_functor_shen_expr(F, SF),
     write_canonical_term_wq([if_bind, SF, true], VNs),
     nl,
     read(X).
@@ -49,13 +49,13 @@ if_bind(F, X) :-
 return_to_shen(T) :-
     bb_get('#%variable_names', VNs0),
     variable_labels(T, VNs0, VNs),
-    functor_shen_expr(T, TF),
+    data_functor_shen_expr(T, TF),
     throw('#%return_success'((ipc:write_canonical_term_wq([TF, false], VNs), nl))).
 
 type_check_return_to_shen(T) :-
     bb_get('#%variable_names', VNs0),
     variable_labels(T, VNs0, VNs),
-    functor_shen_expr(T, TF),
+    executable_functor_shen_expr(T, TF),
     throw('#%return_success'((ipc:write_canonical_term_wq([[type_functor, TF]], VNs), nl))).
 
 write_canonical_term_wq(Term, VNs) :-
@@ -109,20 +109,33 @@ variable_labels(Term, VNs0, VNs) :-
     length(TermVars, NumVars0),
     matching_variable_labels_loop(TermVars, NumVars0, 0, VNs0, VNs).
 
-list_dot_functor([], []).
-list_dot_functor([T|Ts], '.'(T, Us)) :-
-    list_dot_functor(Ts, Us).
-
-functor_shen_expr(T, T) :-
+data_functor_shen_expr(T, T) :-
     (  atomic(T)
     ;  var(T)
     ),
     !.
-functor_shen_expr([T|Ts], '.'('.', U, Us)) :-
-    functor_shen_expr(T, U),
-    functor_shen_expr(Ts, Us),
+data_functor_shen_expr([T|Ts], '.'('.', U, Us)) :-
+    data_functor_shen_expr(T, U),
+    data_functor_shen_expr(Ts, Us),
     !.
-functor_shen_expr(T, '.'(F, Vs)) :-
+data_functor_shen_expr(T, '.'('.', F, Vs)) :-
     T =.. [F | Ts],
-    maplist(functor_shen_expr, Ts, Us),
+    data_functor_shen_expr(Ts, Vs).
+
+list_dot_functor([], []).
+list_dot_functor([T|Ts], '.'(T, Us)) :-
+    list_dot_functor(Ts, Us).
+
+executable_functor_shen_expr(T, T) :-
+    (  atomic(T)
+    ;  var(T)
+    ),
+    !.
+executable_functor_shen_expr([T|Ts], '.'('.', U, Us)) :-
+    executable_functor_shen_expr(T, U),
+    executable_functor_shen_expr(Ts, Us),
+    !.
+executable_functor_shen_expr(T, '.'(F, Vs)) :-
+    T =.. [F | Ts],
+    maplist(executable_functor_shen_expr, Ts, Us),
     list_dot_functor(Us, Vs).
