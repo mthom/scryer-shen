@@ -206,12 +206,15 @@
                                        untagged-vars?))
                                     #'args)
      #'(#%prolog-functor id arg-term ...)]
+    [(f)
+     #:with fn (syntax->shen-prolog-term #'f type-datum? untagged-vars?)
+     #'(#%prolog-functor #%apply fn)]
     [(f first-arg arg ...)
      #:when type-datum?
-     #:with fn-term       (syntax-parse #'f
-                            [(~and id:id (~not :shen-var-id))
-                             #'(#%prolog-functor fn id)]
-                            [term (syntax->shen-prolog-term #'term type-datum? untagged-vars?)])
+     #:with fn-term (syntax-parse #'f
+                      [(~and id:id (~not :shen-var-id))
+                       #'(#%prolog-functor fn id)]
+                      [term (syntax->shen-prolog-term #'term type-datum? untagged-vars?)])
      #:with inner-apply #`(#%prolog-functor #%apply
                                             fn-term
                                             #,(syntax->shen-prolog-term #'first-arg
