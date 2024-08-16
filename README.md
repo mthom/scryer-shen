@@ -89,6 +89,8 @@ Prolog Debug Window, which for the above interaction is
 
 ![Scryer Prolog Debug Window](screenshots/debug_window.png)
 
+These and other new features are described in [this wiki article.](https://github.com/mthom/scryer-shen/wiki/Some-novel-features-of-Scryer-Shen)
+
 # An example interaction
 
 The loaded files are found in [examples](https://github.com/mthom/scryer-shen/tree/master/examples).
