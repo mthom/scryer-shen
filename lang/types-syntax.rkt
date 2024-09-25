@@ -30,7 +30,7 @@
 
 (define-splicing-syntax-class shen-type-declaration
   #:attributes (datum type)
-  (pattern (~seq var (~literal :) (~literal number))
+  (pattern (~seq num (~literal :) (~literal number))
            #:do [(tag-functor-syntax! #'num #'number)]
            #:with var-term (syntax->shen-prolog-term #'var #t #t)
            #:with datum #'(#%prolog-functor #%number var-term)

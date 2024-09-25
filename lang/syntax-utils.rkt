@@ -94,13 +94,12 @@
     [num:number
      (if type-datum?
          #'(#%prolog-functor #%number num)
-         #'str)]
+         #'num)]
     [sym:shen-var-id
      (if type-datum?
          (wrap-tagged-shen-prolog-term #'sym untagged-vars?)
          #'sym)]
     [(~and sym:id
-           ;; (~not :shen-var-id)
            (~not (~literal #%prolog-functor))
            (~not (~literal #%apply)))
      #:when (not (shen-special-form? #'sym))

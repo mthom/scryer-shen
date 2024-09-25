@@ -72,7 +72,7 @@
                              #,@(if (eq? (syntax->datum clause-guard) #t)
                                     #'()
                                     #`((#%prolog-functor type_check
-                                                         (#%prolog-functor '#%apply' #,@clause-guard)
+                                                         #,clause-guard
                                                          verified)))))))
 
     (define-values (assert-declare-string retract-declare-string)
