@@ -18,28 +18,15 @@
                                        (symbol->string (syntax-e this-syntax)))
            #f))
 
-(define (tag-functor-syntax! stx functor-tag)
-  (let ([datum (syntax->datum stx)])
-    (syntax-parse-state-set! datum (lambda (stx) #`(#%prolog-functor #,functor-tag #,stx)))
-    (syntax-parse-state-cons! 'tagged-type-data datum empty)))
-
-(define (reset-tagged-syntax-parse-state!)
-  (for ([key (in-list (syntax-parse-state-ref 'tagged-type-data empty))])
-    (syntax-parse-state-set! key #f))
-  (syntax-parse-state-set! 'tagged-type-data empty))
-
 (define-splicing-syntax-class shen-type-declaration
   #:attributes (term type)
   (pattern (~seq num (~literal :) (~literal number))
-           #:do [(tag-functor-syntax! #'num #'number)]
            #:with term (syntax->shen-prolog-term #'num #t #t)
            #:with type  #'number)
   (pattern (~seq str (~literal :) (~literal string))
-           #:do [(tag-functor-syntax! #'str #'string)]
            #:with term (syntax->shen-prolog-term #'str #t #t)
            #:with type  #'string)
   (pattern (~seq sym (~literal :) (~literal symbol))
-           #:do [(tag-functor-syntax! #'sym #'symbol)]
            #:with term (syntax->shen-prolog-term #'sym #t #t)
            #:with type  #'symbol)
   (pattern (~seq datum-term (~literal :) type-term)
@@ -125,7 +112,6 @@
                  :shen-single-line-bar
                  conq:shen-sequent-consequent
                  (~literal |;|))
-           #:do [(reset-tagged-syntax-parse-state!)]
            #:with (prolog-form ...) #'((defprolog conq.predicate-name
                                          (~@ . conq.assumptions) <--
                                          (~@ . cond.shen-prolog-terms) ... |;|)))
@@ -133,7 +119,6 @@
                  :shen-multi-line-bar
                  conq:shen-sequent-assertion
                  (~literal |;|))
-           #:do [(reset-tagged-syntax-parse-state!)]
            #:with conq-list (shen-cons-syntax #'(conq.assumption))
            #:with impl-list (shen-cons-syntax #'((~@ . cond.implicative) ...))
            #:with (prolog-form ...) #'((defprolog type_check

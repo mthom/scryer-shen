@@ -64,10 +64,13 @@
                        #'(sequent.prolog-form ... ...)))]))
 
   (define (function-def->type-check-queries fn-name type-sig clauses)
-    (define (pattern-hyps pat-types pats clause-guard)
+    (define (pattern-hyps pat-types clause-strings pats clause-guard)
       (with-syntax ([(pat ...) pats]
-                    [(pat-type ...) pat-types])
+                    [(pat-type ...) pat-types]
+                    [(clause-string ...) clause-strings])
         (shen-cons-syntax #`((#%prolog-functor type_check pat pat-type)
+                             ...
+                             (#%prolog-functor type_check clause-string string)
                              ...
                              #,@(if (eq? (syntax->datum clause-guard) #t)
                                     #'()
@@ -110,14 +113,17 @@
          (with-syntax* ([(pat-type ... clause-type) #'(type-sig.type ...)]
                         [(((pat-form ...) ...)
                           (clause-body ...)
-                          (clause-guard ...))
+                          (clause-guard ...)
+                          ((clause-string ...) ...))
                          (syntax-parse clauses
                            [((clause:function-clause-definition) ...+)
-                            #`(((clause.shen-prolog-pat ...) ...)
+                            #'(((clause.shen-prolog-pat ...) ...)
                                (clause.shen-prolog-body ...)
-                               (clause.shen-prolog-guard ...))])]
+                               (clause.shen-prolog-guard ...)
+                               ((clause.shen-string ...) ...))])]
                         [(pattern-hyp ...) (stx-map
                                             (curry pattern-hyps #'(pat-type ...))
+                                            #'((clause-string ...) ...)
                                             #'((pat-form ...) ...)
                                             #'(clause-guard ...))])
            #'(((: type_checker (#%prolog-functor start_proof

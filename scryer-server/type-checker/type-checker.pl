@@ -3,6 +3,7 @@
                          start_proof/3]).
 
 :- use_module(library(dcgs)).
+:- use_module(library(dif)).
 :- use_module(library(iso_ext), [call_with_inference_limit/3]).
 :- use_module(library(lambda)).
 :- use_module(library(lists)).
@@ -40,6 +41,8 @@ maximum_allowed_inferences(65536). % default maximum inferences is 2^16
 attribute_hyp(type_check(X, T)) :-
     term(X),
     type(T).
+attribute_hyp(dif(T, U)) :-
+    dif(T, U).
 
 start_proof(Hyps, type_check(X, T), ProofTree) :-
     retractall(inf_limit_exceeded),
@@ -99,7 +102,10 @@ prove_type_check(discharged(Hyp), PrevHyps, SuccHyps, X, T) -->
 
 affirm_hypothesis(type_check(X, T)) :-
     attribute_hyp(type_check(X, T)),
-    value_type(X, T).
+    (  var(X) ->
+       value_type(X, T)
+    ;  true
+    ).
 affirm_hypothesis(provable([G|Gs])) :-
     maplist(affirm_hypothesis, [G|Gs]).
 affirm_hypothesis(provable(G)) :-

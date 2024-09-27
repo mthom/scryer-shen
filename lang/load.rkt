@@ -10,6 +10,7 @@
          (only-in "reader.rkt"
                   detect-prolog-syntax
                   shen-readtable)
+         racket/syntax
          syntax/parse
          "syntax-utils.rkt"
          (only-in "system-functions.rkt"
@@ -52,13 +53,15 @@
 
 (define (expression-type-check pre-eval-syntax)
   (define type-query
-    #`((#%prolog-functor : type_checker
-                         (#%prolog-functor start_proof []
-                                           (#%prolog-functor type_check
-                                                             #,pre-eval-syntax
-                                                             ResultType)
-                                           _))
-       (type-check-return ResultType)))
+    (with-syntax* ([(str-stx ...) (shen-strings pre-eval-syntax)]
+                   [string-hyps (shen-cons-syntax #'((#%prolog-functor type_check str-stx string) ...))])
+      #`((#%prolog-functor : type_checker
+                           (#%prolog-functor start_proof string-hyps
+                                             (#%prolog-functor type_check
+                                                               #,pre-eval-syntax
+                                                               ResultType)
+                                             _))
+         (type-check-return ResultType))))
 
   (define query-string (eval-syntax (expand-shen-prolog-query type-query)))
   (define query-result (run-prolog-query! query-string))
