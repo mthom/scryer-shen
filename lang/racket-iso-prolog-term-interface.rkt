@@ -31,7 +31,8 @@
 
 (define-lex-abbrev number
    (concatenation (union "-" "")
-                  (repetition 1 +inf.0 numeric)))
+                  (repetition 1 +inf.0 numeric)
+                  (union "" (concatenation "." (repetition 1 +inf.0 numeric)))))
 
 (define-lex-abbrev variable
   (concatenation (union upper-case "_")
