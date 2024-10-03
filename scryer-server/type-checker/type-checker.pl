@@ -127,30 +127,15 @@ succ_ancestor_list(g(type_check(X, T)), AncestorList, [g(type_check(X,T)) | Ance
 succ_ancestor_list(Discharged, AncestorList, AncestorList) :-
     Discharged \= g(type_check(_X, _T)).
 
-chain_proof([], _SuccIs, _AL, _SuccAL, _Hs, _SuccHs, _SubTs, _SuccSubTs, _Cs) -->
-    { assert_inf_limit_exceeded,
-      false }.
-chain_proof([t|Is], [t|Is], AL, AL, Hs, Hs, SubTs, SubTs, []) -->
-    [].
-chain_proof([t|Is], SuccIs, AL, SuccAL, Hs, SuccHs, SubTs, SuccSubTs, [C|Cs]) -->
-    (  { prove([t|Is], AL, Hs, C, SubT),
-         succ_hyps(Hs, C, NewHs),
-         succ_ancestor_list(C, AL, NewAL),
-         SubTs = [SubT | RSubTs] },
-       chain_proof(Is, SuccIs, NewAL, SuccAL, NewHs, SuccHs, RSubTs, SuccSubTs, Cs)
-    ;  { C = h(_) },
-       [C],
-       chain_proof(Is, SuccIs, AL, SuccAL, Hs, SuccHs, SubTs, SuccSubTs, Cs)
-    ).
-
-chain_proof(_Is, _AL, _Hs, [], []).
-chain_proof(Is, AL, Hs, [C|Cs], SubTs) :-
-    length([C|Cs], N),
-    phrase(chain_proof(Is, SuccIs, AL, SuccAL, Hs, SuccHs, SubTs, SuccSubTs, [C|Cs]), FailureQueue),
-    (  length(FailureQueue, N) ->
-       false
-    ;  chain_proof(SuccIs, SuccAL, SuccHs, FailureQueue, SuccSubTs)
-    ).
+chain_proof([], _AL, _Hs, _Cs, _SubTs) :-
+    assert_inf_limit_exceeded,
+    false.
+chain_proof([t|Is], AL, Hs, [], []).
+chain_proof([t|Is], AL, Hs, [C|Cs], [SubT | RSubTs]) :-
+    prove([t|Is], AL, Hs, C, SubT),
+    succ_hyps(Hs, C, NewHs),
+    succ_ancestor_list(C, AL, NewAL),
+    chain_proof(Is, NewAL, NewHs, Cs, RSubTs).
 
 chained_proof_tree(discharged(Hyp), Goal, Subtrees, t(discharged(Hyp), Subtree)) :-
     Subtree =.. [t, Goal | Subtrees].
