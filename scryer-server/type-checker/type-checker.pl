@@ -10,7 +10,6 @@
 
 :- use_module('../scryer-shen-ipc').
 
-:- use_module(proof_trees).
 :- use_module(inference_rules).
 :- use_module(rule_expanders).
 :- use_module(term_variables).
@@ -67,7 +66,6 @@ start_proof(Hyps, type_check(X, T), ProofTree) :-
 depth_iterated_proof(Goal, ProofTree, Status, Inferences) :-
     length(InfList, Inferences),
     (  call(Goal, InfList, ProofTree),
-       verify_proof_tree(ProofTree),
        Status = true
     ;  retract(inf_limit_exceeded),
        NextInferences is 2 * Inferences,
@@ -130,7 +128,7 @@ succ_ancestor_list(Discharged, AncestorList, AncestorList) :-
 chain_proof([], _AL, _Hs, _Cs, _SubTs) :-
     assert_inf_limit_exceeded,
     false.
-chain_proof([t|Is], AL, Hs, [], []).
+chain_proof([t|_Is], _AL, _Hs, [], []).
 chain_proof([t|Is], AL, Hs, [C|Cs], [SubT | RSubTs]) :-
     prove([t|Is], AL, Hs, C, SubT),
     succ_hyps(Hs, C, NewHs),
@@ -146,7 +144,12 @@ prove([], _AncestorList, _Hyps, _Goal, _Tree) :-
     assert_inf_limit_exceeded,
     false.
 prove([t|Infs], AncestorList, Hyps, g(type_check(X, T)), Tree) :-
-    (  precedent_check(AncestorList, Hyps, type_check(X, T), Tree)
+    (  precedent_check(AncestorList, Hyps, type_check(X, T), Tree),
+       (  Tree = fix_point(_),
+          !,
+          false
+       ;  true
+       )
     ;  phrase(prove_type_check(TreeHead, Hyps, SuccHyps, X, T), Conditions),
        succ_ancestor_list(TreeHead, AncestorList, SuccAncestorList),
        chain_proof(Infs, SuccAncestorList, SuccHyps, Conditions, Subtrees),
@@ -159,7 +162,12 @@ prove([t|Infs], AncestorList, Hyps, g(provable([Goal|Goals])), Tree) :-
     Tree =.. [t, g(provable([Goal|Goals])) | Subtrees].
 prove([t|Infs], AncestorList, Hyps, g(provable(Goal)), Tree) :-
     callable(Goal),
-    (  precedent_check(AncestorList, Hyps, provable(Goal), Tree)
+    (  precedent_check(AncestorList, Hyps, provable(Goal), Tree),
+       (  Tree = fix_point(_),
+          !,
+          false
+       ;  true
+       )
     ;  affirm_hypothesis(Goal),
        phrase(provable(Goal), Conditions),
        chain_proof(Infs, [g(provable(Goal))|AncestorList], [Goal|Hyps], Conditions, Subtrees),
