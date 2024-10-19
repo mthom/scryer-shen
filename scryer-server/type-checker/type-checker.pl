@@ -145,8 +145,7 @@ prove([], _AncestorList, _Hyps, _Goal, _Tree) :-
     false.
 prove([t|Infs], AncestorList, Hyps, g(type_check(X, T)), Tree) :-
     (  precedent_check(AncestorList, Hyps, type_check(X, T), Tree),
-       (  Tree = fix_point(_),
-          !,
+       (  Tree = fix_point(_) ->
           false
        ;  true
        )
@@ -163,8 +162,7 @@ prove([t|Infs], AncestorList, Hyps, g(provable([Goal|Goals])), Tree) :-
 prove([t|Infs], AncestorList, Hyps, g(provable(Goal)), Tree) :-
     callable(Goal),
     (  precedent_check(AncestorList, Hyps, provable(Goal), Tree),
-       (  Tree = fix_point(_),
-          !,
+       (  Tree = fix_point(_) ->
           false
        ;  true
        )
