@@ -30,7 +30,9 @@
          single-quoted))
 
 (define-lex-abbrev number
-  (repetition 1 +inf.0 numeric))
+   (concatenation (union "-" "")
+                  (repetition 1 +inf.0 numeric)
+                  (union "" (concatenation "." (repetition 1 +inf.0 numeric)))))
 
 (define-lex-abbrev variable
   (concatenation (union upper-case "_")
@@ -122,24 +124,6 @@
          (fprintf output-port "~a" space)
          (write-shen-term subterm))
        (write-string "]" output-port)]
-      [(list 'clause
-             (list 'atom '|'.'|)
-             (list 'term (list 'atom '|'#%string'|))
-             (list 'term (list 'clause (list 'atom '|'.'|)
-                               value
-                               (list 'term (list 'atom '|[]|)))))
-       (write (let ([char-list (iso-prolog-term->shen-expr value)])
-                (apply string-append (map symbol->string (cons-contents char-list))))
-              output-port)]
-      [(list 'clause
-             (list 'atom '|'.'|)
-             (list 'term (list 'atom (or '|'#%number'| '|'#%symbol'| '|'#%?'|)))
-             (list 'term (list 'clause (list 'atom '|'.'|)
-                               (list 'term (list _ value))
-                               (list 'term (list 'atom '|[]|)))))
-       (if (symbol? value)
-           (write-string (un-bar-bracket value) output-port)
-           (write value output-port))]
       [(and (var term)
             (list 'clause (list 'atom '|'.'|)
                   _ _))

@@ -7,22 +7,17 @@
 :- discontiguous(type_check/4).
 :- multifile(type_check/4).
 
-type_check('#%?' X, T) -->
-    { of_type('#%?' X, T) }.
-type_check([], list(_A)) --> [].
-type_check(true, boolean) --> [].
-type_check(false, boolean) --> [].
-type_check('#%string'(X), string) -->
-    { value_type('#%string'(X), string) }.
-type_check('#%number'(X), number) -->
-    { value_type('#%number'(X), number) }.
-type_check('#%symbol'(X), symbol) -->
-    { value_type('#%symbol'(X), symbol) }.
-type_check('#%symbol'(F), FnT) -->
-    [g(declare(F, FnT))].
+type_check(X, T) -->
+    { of_type(X, T) }.
 type_check([X|Xs], list(A)) -->
     [g(type_check(X, A)),
      g(type_check(Xs, list(A)))].
+type_check([], list(_A)) -->
+    [].
+type_check(true, boolean) -->
+    [].
+type_check(false, boolean) -->
+    [].
 type_check('@p'(X,Y), A * B) -->
     [g(type_check(X, A)),
      g(type_check(Y, B))].
@@ -57,7 +52,14 @@ type_check(freeze(E), lazy(A)) -->
     [g(type_check(E, A))].
 type_check(thaw(E), A) -->
     [g(type_check(E, lazy(A)))].
-
+type_check(X, number) -->
+    { value_type(X, number) }.
+type_check(X, symbol) -->
+    { value_type(X, symbol) }.
+type_check(F, FnT) -->
+    { nonvar(F),
+      value_type(F, symbol) },
+    [g(declare(F, FnT))].
 
 :- discontiguous(provable/3).
 :- multifile(provable/3).
@@ -129,3 +131,4 @@ declare(snd, ((_A * B) --> B)).
 declare(gensym, (symbol --> symbol)).
 declare(hdstr, (string --> string)).
 declare(intern, (string --> symbol)).
+declare(not, (boolean --> boolean)).

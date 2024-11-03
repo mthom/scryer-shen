@@ -62,6 +62,7 @@
                             internal
                             limit
                             load
+                            [shen-not not]
                             output
                             snd
                             symbol?

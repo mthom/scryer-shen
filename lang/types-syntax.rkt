@@ -18,36 +18,20 @@
                                        (symbol->string (syntax-e this-syntax)))
            #f))
 
-(define (tag-functor-syntax! stx functor-tag)
-  (let ([datum (syntax->datum stx)])
-    (syntax-parse-state-set! datum (lambda (stx) #`(#%prolog-functor #,functor-tag #,stx)))
-    (syntax-parse-state-cons! 'tagged-type-data datum empty)))
-
-(define (reset-tagged-syntax-parse-state!)
-  (for ([key (in-list (syntax-parse-state-ref 'tagged-type-data empty))])
-    (syntax-parse-state-set! key #f))
-  (syntax-parse-state-set! 'tagged-type-data empty))
-
 (define-splicing-syntax-class shen-type-declaration
-  #:attributes (datum type)
-  (pattern (~seq var (~literal :) (~literal number))
-           #:do [(tag-functor-syntax! #'num #'number)]
-           #:with var-term (syntax->shen-prolog-term #'var #t #t)
-           #:with datum #'(#%prolog-functor #%number var-term)
+  #:attributes (term type)
+  (pattern (~seq num (~literal :) (~literal number))
+           #:with term (syntax->shen-prolog-term #'num #t #t)
            #:with type  #'number)
   (pattern (~seq str (~literal :) (~literal string))
-           #:do [(tag-functor-syntax! #'str #'string)]
-           #:with str-term (syntax->shen-prolog-term #'str #t #t)
-           #:with datum #'(#%prolog-functor #%string str-term)
+           #:with term (syntax->shen-prolog-term #'str #t #t)
            #:with type  #'string)
   (pattern (~seq sym (~literal :) (~literal symbol))
-           #:do [(tag-functor-syntax! #'sym #'symbol)]
-           #:with sym-term (syntax->shen-prolog-term #'sym #t #t)
-           #:with datum #'(#%prolog-functor #%symbol sym-term)
+           #:with term (syntax->shen-prolog-term #'sym #t #t)
            #:with type  #'symbol)
   (pattern (~seq datum-term (~literal :) type-term)
-           #:with datum (syntax->shen-prolog-term #'datum-term #t #t)
-           #:with type  (syntax->shen-prolog-term #'type-term #f)))
+           #:with term (syntax->shen-prolog-term #'datum-term #t #t)
+           #:with type (syntax->shen-prolog-term #'type-term #f)))
 
 (define-splicing-syntax-class shen-type-equation
   #:attributes (first-arg second-arg)
@@ -58,9 +42,9 @@
 (define-splicing-syntax-class shen-sequent-assertion
   #:attributes (assumption head-args shen-prolog-term)
   (pattern (~seq type-decl:shen-type-declaration)
-           #:with assumption #'(#%prolog-functor type_check type-decl.datum type-decl.type)
-           #:with head-args  #'(type-decl.datum type-decl.type)
-           #:with shen-prolog-term #'(#%prolog-functor type_check type-decl.datum type-decl.type))
+           #:with assumption #'(#%prolog-functor type_check type-decl.term type-decl.type)
+           #:with head-args  #'(type-decl.term type-decl.type)
+           #:with shen-prolog-term #'(#%prolog-functor type_check type-decl.term type-decl.type))
   (pattern (~seq type-equation:shen-type-equation)
            #:with assumption #'(#%prolog-functor type_eq type-equation.first-arg type-equation.second-arg)
            #:with head-args  #'(type-equation.first-arg type-equation.second-arg)
@@ -128,7 +112,6 @@
                  :shen-single-line-bar
                  conq:shen-sequent-consequent
                  (~literal |;|))
-           #:do [(reset-tagged-syntax-parse-state!)]
            #:with (prolog-form ...) #'((defprolog conq.predicate-name
                                          (~@ . conq.assumptions) <--
                                          (~@ . cond.shen-prolog-terms) ... |;|)))
@@ -136,7 +119,6 @@
                  :shen-multi-line-bar
                  conq:shen-sequent-assertion
                  (~literal |;|))
-           #:do [(reset-tagged-syntax-parse-state!)]
            #:with conq-list (shen-cons-syntax #'(conq.assumption))
            #:with impl-list (shen-cons-syntax #'((~@ . cond.implicative) ...))
            #:with (prolog-form ...) #'((defprolog type_check

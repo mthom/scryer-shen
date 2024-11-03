@@ -9,17 +9,15 @@
 verify_attributes(Var, Other, []) :-
     (  get_atts(Var, type_equated) ->
        true
-    ;  var(Other) ->
+    ;  var(Other),
        (  get_atts(Other, type_equated) ->
           true
        ;  get_atts(Other, type_var) ->
-          (  get_atts(Var, type_var) ->
+          (  get_atts(Var, type_var),
              Var == Other
-          ;  false
           )
        ;  true
        )
-    ;  false
     ).
 
 type(T) :-

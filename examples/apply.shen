@@ -1,8 +1,3 @@
-(defprolog h-list-to-function-sig
-  [] R R <--;
-  [T1 T2|Ts] -->(T1 Rs) R <-- (h-list-to-function-sig [T2|Ts] Rs R);
-  [T] -->(T R) R <--;)
-
 (datatype heterogeneous-lists
    ____________________________
    [] : (h-list Ts) >> Ts ~ [];
@@ -17,6 +12,11 @@
    Xs : (h-list Ts);
    _________________________
    [X|Xs] : (h-list [T|Ts]);)
+
+(defprolog h-list-to-function-sig
+  [] R R <--;
+  [T1 T2|Ts] -->(T1 Rs) R <-- (h-list-to-function-sig [T2|Ts] Rs R);
+  [T] -->(T R) R <--;)
 
 (prolog? (use-module (library dif)))
 
@@ -41,6 +41,12 @@
   F : (h-mappable [T|Ts] R);)
 
 (define apply
-  { (h-mappable [T|Ts] R) --> (h-list [T|Ts]) --> R }
+  { (h-mappable Ts R) --> (h-list Ts) --> R }
+  F []         -> (F)
   F [X]        -> (F X)
   F [X1 X2|Xs] -> (apply (F X1) [X2|Xs]))
+
+(define apply1
+  { (h-mappable [T|Ts] R) --> (h-list [T|Ts]) --> R}
+  F [X]        -> (F X)
+  F [X1 X2|Xs] -> (apply1 (F X1) [X2|Xs]))

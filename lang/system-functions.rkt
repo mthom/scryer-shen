@@ -76,12 +76,10 @@
         arity)))
 
 (define (bound? var)
-  (if (symbol? var)
-      (with-handlers ([exn:fail:contract? (lambda (_) #f)])
-        (begin
-          (hash-ref shen-variable-bindings var)
-          #t))
-      (error "bound?: first parameter must be a symbol.")))
+  (with-handlers ([exn:fail:contract? (lambda (_) #f)])
+    (begin
+      (hash-ref shen-variable-bindings var)
+      #t)))
 
 (define (value key)
   (if (symbol? key)
@@ -208,3 +206,8 @@
   (string (string-ref str 0)))
 
 (define intern string->symbol)
+
+(define (shen-not val)
+  (if (boolean? val)
+      (not val)
+      (error 'not "~a is not a boolean" val)))

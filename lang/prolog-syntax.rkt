@@ -17,7 +17,6 @@
         underlying-str
         (string-append "'" underlying-str "'"))))
 
-;; write-as-prolog-datum is not redundant: runtime data need
 (define (write-as-prolog-datum datum port)
   (let loop ([datum datum])
     (match datum
@@ -49,8 +48,9 @@
                             #:when (and query? embedded?)
                             (gvector-add! received-vars-vec #'id)
                             (datum->syntax stx '~a stx)]
-                           [(~or ((~datum cons) hd tl)
-                                 ((~datum #%prolog-functor) . args))
+                           [(~or ((~datum cons) _ _)
+                                 ((~datum #%prolog-functor) . _)
+                                 ((~datum #%free-variable) _))
                             stx]
                            [(hd . tl)
                             #:when top-level-arg?
@@ -87,6 +87,9 @@
                                     (write-string "use_module('" string-port)
                                     (write (syntax->datum #'file-name) string-port)
                                     (write-string "')" string-port)]
+                                   [((~datum #%free-variable) var)
+                                    (define datum (syntax->datum #'var))
+                                    (write-string (string-append "'" (symbol->string datum) "'") string-port)]
                                    [((~and slash-op (~or (~literal |\+|) (~literal |\=|) (~literal |\==|)))
                                      term)
                                     #:when top-level?
