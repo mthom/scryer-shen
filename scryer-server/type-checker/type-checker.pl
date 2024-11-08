@@ -47,7 +47,7 @@ start_proof(Hyps, type_check(X, T), ProofTree) :-
     retractall(inf_limit_exceeded),
     maplist(attribute_hyp, Hyps),
     term(X),
-    Goal = (Hyps, X, T)+\Infs^ProofTree^prove(Infs, [], Hyps, g(type_check(X, T)), ProofTree),
+    Goal = (Hyps, X, T)+\Infs^ProofTree^prove(Infs, Hyps, g(type_check(X, T)), ProofTree),
     call_with_inference_limit(
         depth_iterated_proof(Goal, ProofTree, Status, 32),
         50_000,
@@ -85,10 +85,8 @@ shen_if_condition(G) :-
     if_bind(G, F),
     F \== false.
 
-precedent_check(_AncestorList, Hyps, Goal, assumed(g(Goal))) :-
+precedent_check(Hyps, Goal, assumed(g(Goal))) :-
     member(Goal, Hyps).
-precedent_check(AncestorList, _Hyps, Goal, fix_point(g(Goal))) :-
-    member(g(Goal), AncestorList).
 
 prove_type_check(g(type_check(X, T)), Hyps, Hyps, X, T) -->
     { term(X) },
@@ -121,60 +119,46 @@ succ_hyps(Hyps, h(provable(H)), [H|Hyps]).
 succ_hyps(Hyps, h(Goal), [Goal|Hyps]).
 succ_hyps(Hyps, g(_),    Hyps).
 
-succ_ancestor_list(g(type_check(X, T)), AncestorList, [g(type_check(X,T)) | AncestorList]).
-succ_ancestor_list(Discharged, AncestorList, AncestorList) :-
-    Discharged \= g(type_check(_X, _T)).
-
-chain_proof([], _AL, _Hs, _Cs, _SubTs) :-
+chain_proof([], _Hs, _Cs, _SubTs) :-
     assert_inf_limit_exceeded,
     false.
-chain_proof([t|_Is], _AL, _Hs, [], []).
-chain_proof([t|Is], AL, Hs, [C|Cs], [SubT | RSubTs]) :-
-    prove([t|Is], AL, Hs, C, SubT),
+chain_proof([t|_Is], _Hs, [], []).
+chain_proof([t|Is], Hs, [C|Cs], [SubT | RSubTs]) :-
+    prove([t|Is], Hs, C, SubT),
     succ_hyps(Hs, C, NewHs),
-    succ_ancestor_list(C, AL, NewAL),
-    chain_proof(Is, NewAL, NewHs, Cs, RSubTs).
+    chain_proof(Is, NewHs, Cs, RSubTs).
 
 chained_proof_tree(discharged(Hyp), Goal, Subtrees, t(discharged(Hyp), Subtree)) :-
     Subtree =.. [t, Goal | Subtrees].
 chained_proof_tree(_TreeHead, Goal, Subtrees, Tree) :-
     Tree =.. [t, Goal | Subtrees].
 
-prove([], _AncestorList, _Hyps, _Goal, _Tree) :-
+prove([], _Hyps, _Goal, _Tree) :-
     assert_inf_limit_exceeded,
     false.
-prove([t|Infs], AncestorList, Hyps, g(type_check(X, T)), Tree) :-
-    (  precedent_check(AncestorList, Hyps, type_check(X, T), Tree),
-       (  Tree = fix_point(_) ->
-          false
-       ;  true
-       )
+prove([t|Infs], Hyps, g(type_check(X, T)), Tree) :-
+    (  precedent_check(Hyps, type_check(X, T), Tree)
     ;  phrase(prove_type_check(TreeHead, Hyps, SuccHyps, X, T), Conditions),
-       succ_ancestor_list(TreeHead, AncestorList, SuccAncestorList),
-       chain_proof(Infs, SuccAncestorList, SuccHyps, Conditions, Subtrees),
+       chain_proof(Infs, SuccHyps, Conditions, Subtrees),
        chained_proof_tree(TreeHead, g(type_check(X, T)), Subtrees, Tree)
     ).
-prove([t|Infs], AncestorList, Hyps, g(provable([Goal|Goals])), Tree) :-
-    maplist((Infs, AncestorList, Hyps)+\G^ST^prove(Infs, AncestorList, Hyps, g(provable(G)), ST),
+prove([t|Infs], Hyps, g(provable([Goal|Goals])), Tree) :-
+    maplist((Infs, Hyps)+\G^ST^prove(Infs, Hyps, g(provable(G)), ST),
             [Goal|Goals],
             Subtrees),
     Tree =.. [t, g(provable([Goal|Goals])) | Subtrees].
-prove([t|Infs], AncestorList, Hyps, g(provable(Goal)), Tree) :-
+prove([t|Infs], Hyps, g(provable(Goal)), Tree) :-
     callable(Goal),
-    (  precedent_check(AncestorList, Hyps, provable(Goal), Tree),
-       (  Tree = fix_point(_) ->
-          false
-       ;  true
-       )
+    (  precedent_check(Hyps, provable(Goal), Tree)
     ;  affirm_hypothesis(Goal),
        phrase(provable(Goal), Conditions),
-       chain_proof(Infs, [g(provable(Goal))|AncestorList], [Goal|Hyps], Conditions, Subtrees),
+       chain_proof(Infs, [Goal|Hyps], Conditions, Subtrees),
        chained_proof_tree(g(provable(Goal)), g(provable(Goal)), Subtrees, Tree)
     ).
-prove([t|_Infs], _AncestorList, _Hyps, g(Goal), t(g(Goal))) :-
+prove([t|_Infs], _Hyps, g(Goal), t(g(Goal))) :-
     callable(Goal),
     \+ functor(Goal, type_check, 2),
     \+ functor(Goal, provable, 1),
     call(Goal).
-prove([t|_Infs], _AncestorList, _Hyps, h(Goal), assumed(g(Goal))) :-
+prove([t|_Infs], _Hyps, h(Goal), assumed(g(Goal))) :-
     affirm_hypothesis(Goal).
