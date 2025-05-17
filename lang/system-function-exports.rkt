@@ -23,7 +23,6 @@
                          [/ #:arity 2]
                          [> #:arity 2]
                          [< #:arity 2]
-                         [equal? = #:arity 2]
                          [equal? == #:arity 2]
                          [>= #:arity 2]
                          [<= #:arity 2]
@@ -37,7 +36,8 @@
                          [difference #:arity 2]
                          [element? #:arity 2])
          (rename-out [begin do])
-         (shen-function-out atom?
+         (shen-function-out [shen-= =]
+                            atom?
                             [car head]
                             cd
                             [cdr tail]

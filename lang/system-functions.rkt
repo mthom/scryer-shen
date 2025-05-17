@@ -211,3 +211,8 @@
   (if (boolean? val)
       (not val)
       (error 'not "~a is not a boolean" val)))
+
+(define (shen-= x y)
+  (if (and (number? x) (number? y))
+      (= x y)
+      (equal? x y)))
